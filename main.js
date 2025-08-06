@@ -266,7 +266,7 @@ function windowResized() {
   attPlot.GPLOT.setOuterDim(clientWidth, clientHeight);
   attPlot.GPLOT.setPos(0, 0);
   gui.prototype.setPosition(clientWidth, attPlot.GPLOT.mar[2]);
-  gui2.prototype.setPosition(clientWidth, 300 + attPlot.GPLOT.mar[2]);
+  gui2.prototype.setPosition(clientWidth, 400 + attPlot.GPLOT.mar[2]);
   textGui.prototype.setPosition(0, clientHeight);
 }
 
