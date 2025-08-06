@@ -236,7 +236,7 @@ function updateHalfLifeText() {
   hlLabel.innerHTML = `
 <p>
   Default values are an approximation for TPO<br>
-  Need to find your Naperian absorbtivity? <-- **Add link here**
+  Need to find your Napierian absorbtivity? <-- **Add link here**
 </p>
 <p>
   At what depth are you optically thin?<br>
