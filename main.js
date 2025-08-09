@@ -58,148 +58,158 @@ function updateEquations() {
  * Abstraction class to set and handle slider logic. Basically, this avoids having to create each slider in the index.html file,
  *   and puts logic behind it with event listeners. This is similar to how p5.gui works, but with more flexibility.
  */
+
+
+
 class MySlider {
-  /**
-   * Create a new slider in the dom. Note it must be attached to a parent to become visible.
-   * @param {string} key Unique ID to assign to the elements
-   * @param {number} min minimum value
-   * @param {number} max maximum value
-   * @param {number} init initial value
-   * @param {number} step slider minimum step
-   * @param {string} label slider label to go before value
-   * @param {string} units unit label to go after value
-   */
-  constructor (key, min, max, init, step, label, units) {
-    // Create an element in the DOM
-    const containerDiv = document.createElement("div");
-    // Assign a unique id and the css style class
-    containerDiv.id = `${key}-container`;
-    containerDiv.className = "qs_container";
-    
-    // Create the label
-    const labelDiv = document.createElement("div");
-    labelDiv.id = `${key}-label`;
-    labelDiv.className = "qs_label";
-
-    // Create input box inside label first
-    const valBox = document.createElement("input");
-    valBox.id = `${key}-value-box`;
-    valBox.type = "text";
-    valBox.value = `${init.toFixed(-Math.log10(step))}`;
-    valBox.style = "width:40px";
-    // Append the text to the label
-    labelDiv.innerHTML = `<b>${label}:</b> `;
-    labelDiv.append(valBox);
-    labelDiv.append(` ${units}`);
-    containerDiv.appendChild(labelDiv);
-
-    // Create the slider
-    const sliderDiv = document.createElement("input");
-    sliderDiv.id = `${key}-slider`;
-    sliderDiv.className = "qs_range";
-    sliderDiv.type = "range";
-    // Range attributes
-    sliderDiv.min=`${min}`;
-    sliderDiv.max=`${max}`;
-    sliderDiv.step=`${step}`;
-    sliderDiv.value = `${init}`;
-    // Append
-    containerDiv.appendChild(sliderDiv);
-
-    // Create the + and - buttons
-    const plusBtn = document.createElement("button");
-    plusBtn.innerHTML = "+";
-    const minusBtn = document.createElement("button");
-    minusBtn.innerHTML = "-";
-    [minusBtn, plusBtn].forEach((btn) => {
-      btn.type = "button";
-      btn.className = "btn btn-secondary";
-      containerDiv.appendChild(btn);
-    });
-  
-    // Update class variables
+  constructor(key, min, max, init, step, label, units) {
+    this.min = min;
+    this.max = max;
+    this.step = step;
     this.label = label;
     this.units = units;
-    this.step = step;
     this.val = init;
-    this.max = max;
-    this.min = min;
-    this.div = containerDiv;
-    this.sliderDiv = sliderDiv;
-    this.valBox = valBox;
-    this.minusBtn = minusBtn;
-    this.plusBtn = plusBtn;
+
+    this.div = document.createElement("div");
+    this.div.className = "qs_container";
+
+    this.labelDiv = document.createElement("div");
+    this.labelDiv.className = "qs_label";
+    this.labelDiv.innerHTML = `<b>${label}:</b> `;
+
+    this.valBox = document.createElement("input");
+    this.valBox.type = "text";
+    this.valBox.id = key + "-value-box";
+    this.valBox.style.width = "60px";
+
+    const decimalPlaces = Math.max(0, -Math.floor(Math.log10(step)));
+    this.valBox.value = init.toFixed(decimalPlaces);
+
+    this.labelDiv.appendChild(this.valBox);
+    this.labelDiv.append(` ${units}`);
+
+    this.div.appendChild(this.labelDiv);
+
+    this.sliderDiv = document.createElement("input");
+    this.sliderDiv.type = "range";
+    this.sliderDiv.min = min;
+    this.sliderDiv.max = max;
+    this.sliderDiv.step = step;
+    this.sliderDiv.value = init;
+    this.sliderDiv.style.width = "160px";
+
+    this.div.appendChild(this.sliderDiv);
+
+    this.minusBtn = document.createElement("button");
+    this.minusBtn.type = "button";
+    this.minusBtn.className = "btn btn-secondary";
+    this.minusBtn.textContent = "-";
+
+    this.plusBtn = document.createElement("button");
+    this.plusBtn.type = "button";
+    this.plusBtn.className = "btn btn-secondary";
+    this.plusBtn.textContent = "+";
+
+    this.div.appendChild(this.minusBtn);
+    this.div.appendChild(this.plusBtn);
+
     this.callback = null;
 
-    // Add event listeners
     this.addEventListeners();
   }
 
-  /**
-   * Set the internal callback for a slider. Use this to modify parent values
-   * @param {(value: number) => {}} callback Function that will be called with (newValue) each time the value is modified
-   */
-  setCallback = (callback) => {
-    this.callback = callback;
-  }
-
-  /**
-   * Add appropriate event listeners to the relevant DOM elements
-   */
   addEventListeners = () => {
-    // Slider
+    // Slider input clamps and updates val
     this.sliderDiv.addEventListener("input", (event) => {
       this.val = Number(event.target.value);
       this.onUpdate();
     });
 
-    // Text box
+    // Text input allows partial typing, updates val only on valid numbers
     this.valBox.addEventListener("input", (e) => {
-      const value = Number(e.target.value);
-      if (value !== value) {
+      const str = e.target.value;
+
+      // Allow intermediate inputs like '', '-', '.', '-.'
+      if (str === '' || str === '-' || str === '.' || str === '-.') {
+        return; // just let user type
       }
-      else {
-        this.val = value;
-        this.onUpdate(false);
+
+      const num = Number(str);
+
+      if (!isNaN(num)) {
+        this.val = num;
+        this.onUpdate(false); // update slider but do NOT overwrite textbox value
+      }
+      // else do nothing, user can fix input
+    });
+
+    // On blur, validate fully and fix or revert input
+    this.valBox.addEventListener("blur", () => {
+      const val = this.valBox.value.trim();
+      const num = Number(val);
+      const decimalPlaces = Math.max(0, -Math.floor(Math.log10(this.step)));
+      const validDecimalRegex = /^[-+]?\d*\.?\d+$/;
+
+      if (
+        val === '' ||
+        isNaN(num) ||
+        !validDecimalRegex.test(val)
+      ) {
+        alert('Please enter a valid decimal number.');
+        this.valBox.value = this.val.toFixed(decimalPlaces);
+        this.valBox.focus();
+      } else {
+        this.val = num;
+        this.onUpdate(true); // round and update UI
       }
     });
 
-    // Minus button
-    this.plusBtn.addEventListener("click", () => {
-      // Increment, but not past max
-      this.val = min(this.val + this.step, this.max);
-      this.onUpdate(true);
-    });
-
-    // Plus button
+    // Minus button: decrement val, slider clamped on update
     this.minusBtn.addEventListener("click", () => {
-      // Decrement, but not past min
-      this.val = max(this.val - this.step, this.min);
+      this.val = this.val - this.step;
+      this.onUpdate(true);
+    });
+
+    // Plus button: increment val, slider clamped on update
+    this.plusBtn.addEventListener("click", () => {
+      this.val = this.val + this.step;
       this.onUpdate(true);
     });
   }
 
-  /**
-   * Function to be called internally each time a value is modified
-   */
-  onUpdate = (round=true) => {
-    // Update the label
-    this.sliderDiv.value = `${this.val}`;
-    this.valBox.value = `${round ? this.val.toFixed(-Math.log10(this.step)) : this.val}`;
-    // Call the callback if it is not null
-    this.callback?.(this.val);
-    // Redraw the canvas
-    loop();
+  onUpdate = (round = true) => {
+    // Clamp slider to min/max for display
+    let sliderVal = this.val;
+    if (sliderVal < this.min) sliderVal = this.min;
+    if (sliderVal > this.max) sliderVal = this.max;
+    this.sliderDiv.value = `${sliderVal}`;
+
+    // Update valBox only if round === true (on blur/buttons)
+    if (round) {
+      this.valBox.value = this.val.toFixed(Math.max(0, -Math.floor(Math.log10(this.step))));
+    }
+
+    if (this.callback) this.callback(this.val);
+
+    if (typeof loop === "function") loop();
   }
 
-  /**
-   * Attach a parent element to the slider container.
-   * @param {HTMLElement} parent new parent element for the slider.
-   */
+  setCallback = (callback) => {
+    this.callback = callback;
+  }
+
   attachParent = (parent) => {
     parent.appendChild(this.div);
   }
 }
+
+
+
+
+   
+
+
+
 
 /**
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
