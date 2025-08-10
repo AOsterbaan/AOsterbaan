@@ -370,172 +370,12 @@ function windowResized() {
 function setup() {
   createCanvas(clientWidth, clientHeight);
 
-  attPlot = new PlotCanvas(this);
-  attPlot.plotSetup();
-  attPlot.GPLOT.getXAxis().getAxisLabel().setText("Depth (\u03BCm)");
-  attPlot.GPLOT.getYAxis().getAxisLabel().setText("Intensity (mW/cm\u00B2)");
-  attPlot.GPLOT.getTitle().setText("Attenuation Due to One Absorber");
-
-  // Main GUI
-  gui = createGui('Plot Controls', clientWidth, attPlot.GPLOT.mar[2]);
-  const parent = gui.prototype._panel;
-  const concSlider = new MySlider('Conc', 0, 1000, Conc, 0.1, 'Absorber Concentration', 'mM');
-  const absSlider = new MySlider('Absorb', 0, 5000, Absorb, 0.1, 'Napierian Absorptivity', 'L/mol-cm');
-  const intSlider = new MySlider('Intensity', 0, 100, Intensity, 0.01, 'Incident Intensity', 'mW/cm\u00B2');
-  const dptSlider = new MySlider('Depth', 15, 2000, Depth, 1, 'Depth', '\u03BCm');
-  const callbacks = [
-    (val) => Conc = val,
-    (val) => Absorb = val,
-    (val) => Intensity = val,
-    (val) => Depth = val
-  ];
-  [concSlider, absSlider, intSlider, dptSlider].forEach((slider, index) => {
-    slider.attachParent(parent);
-    slider.setCallback(callbacks[index]);
-  });
-
-  // Secondary GUI
-  gui2 = createGui('Additional Variables for Half-life', clientWidth, secondaryGuiTopOffset + attPlot.GPLOT.mar[2]);
-  const laSlider = new MySlider('Wavelength', 200, 600, Wavelength, 0.1, 'Wavelength', 'nm');
-  const qySlider = new MySlider('QY', 0, 1, QY, 0.01, 'Quantum Yield', '');
-  const gui2parent = gui2.prototype._panel;
-  laSlider.attachParent(gui2parent);
-  laSlider.setCallback((val) => Wavelength = val);
-  qySlider.attachParent(gui2parent);
-  qySlider.setCallback((val) => QY = val);
-
-  // Text GUI for half-life results (Results panel)
-  textGui = createGui('Results', resultsPanelLeft, resultsPanelTopOffset);
-  textGui.prototype._panel.className = "qs_main text-gui";
-  initHalfLifeText(textGui.prototype._panel);
-
-  // === ORIGINAL Product GUI ===
-  productGui = createGui('Napierian Absorptivity', productPanelLeftMargin, productPanelTopOffset);
-  const productParent = productGui.prototype._panel;
-
-  // Variables for original product sliders
-  const productAbsSlider = new ProductSlider('prodAbsorb', 0, 3, productAbsorbance, 0.001, 'Absorbance', '');
-  const productConcSlider = new ProductSlider('prodConc', 0, 500, productConcentration, 0.01, 'Concentration Absorber', 'mM');
-  const productPathLengthSlider = new ProductSlider('prodPathLength', 0, 5, productThickness, 0.001, 'Path Length', 'cm');
-
-  [productAbsSlider, productConcSlider, productPathLengthSlider].forEach(slider => {
-    slider.attachParent(productParent);
-  });
-
-  // Result display div for original product GUI
-  const productResultDiv = document.createElement('div');
-  productResultDiv.style.marginTop = '10px';
-  productResultDiv.style.fontWeight = 'bold';
-  productResultDiv.style.width = '100%';
-  productResultDiv.style.textAlign = 'center';
-  productResultDiv.style.flexBasis = '100%';
-  productParent.appendChild(productResultDiv);
-
-  function updateProductValue() {
-    if (productConcentration === 0) {
-      productResultDiv.textContent = 'Product: Concentration cannot be zero';
-      return;
-    }
-    const value = Math.log(10) * productAbsorbance / productThickness / productConcentration * 1e3;
-
-    productResultDiv.innerHTML = '';
-
-    const labelDiv = document.createElement('div');
-    labelDiv.textContent = 'Napierian Absorptivity:';
-    labelDiv.style.fontWeight = 'bold';
-
-    const valueDiv = document.createElement('div');
-    valueDiv.textContent = `${value.toFixed(1)} L/mol-cm`;
-
-    productResultDiv.appendChild(labelDiv);
-    productResultDiv.appendChild(valueDiv);
-
-    loop();
-  }
-
-  productAbsSlider.setCallback((val) => {
-    productAbsorbance = val;
-    updateProductValue();
-  });
-  productConcSlider.setCallback((val) => {
-    productConcentration = val;
-    updateProductValue();
-  });
-  productPathLengthSlider.setCallback((val) => {
-    productThickness = val;
-    updateProductValue();
-  });
-
-  updateProductValue();
-
-  // === NEW GUI (duplicated, to the right) ===
-  const newGuiLeft = productPanelLeftMargin + productPanelWidth + panelHorizontalSpacing;
-  const newGuiTop = productPanelTopOffset;
-
-  const newGui = createGui('wt% to mM conversion', newGuiLeft, newGuiTop);
-  const newGuiParent = newGui.prototype._panel;
-
-  // Variables for new sliders and initial values
-  let concNew = 0.1;  // wt%
-  let dNew = 0.786;   // g/mL
-  let MWNew = 348.37; // g/mol
-
-  // Create sliders for new variables
-  const concSliderNew = new ProductSlider('conc_wt', 0, 10, concNew, 0.001, 'Concentration Absorber', 'wt%');
-  const dSliderNew = new ProductSlider('density', 0, 2, dNew, 0.001, 'Density', 'g/mL');
-  const mwSliderNew = new ProductSlider('mol_weight', 0, 1000, MWNew, 0.01, 'Absorber Molecular Weight', 'g/mol');
-
-  [concSliderNew, dSliderNew, mwSliderNew].forEach(slider => {
-    slider.attachParent(newGuiParent);
-  });
-
-  // Output display div for new GUI
-  const concOutputDiv = document.createElement('div');
-  concOutputDiv.style.marginTop = '10px';
-  concOutputDiv.style.fontWeight = 'bold';
-  concOutputDiv.style.width = '100%';
-  concOutputDiv.style.textAlign = 'center';
-  concOutputDiv.style.flexBasis = '100%';
-  newGuiParent.appendChild(concOutputDiv);
-
-  function updateConcentration() {
-    if (MWNew === 0) {
-      concOutputDiv.textContent = 'Molecular Weight cannot be zero';
-      return;
-    }
-    // Calculate concentration in mM
-    const concentration_mM = (concNew * dNew / MWNew) * 1e4;  // in mM
-
-    concOutputDiv.innerHTML = '';
-    const labelDiv = document.createElement('div');
-    labelDiv.textContent = 'Concentration:';
-    labelDiv.style.fontWeight = 'bold';
-
-    const valueDiv = document.createElement('div');
-    valueDiv.textContent = `${concentration_mM.toFixed(2)} mM`;
-
-    concOutputDiv.appendChild(labelDiv);
-    concOutputDiv.appendChild(valueDiv);
-
-    loop();
-  }
-
-  concSliderNew.setCallback((val) => {
-    concNew = val;
-    updateConcentration();
-  });
-
-  dSliderNew.setCallback((val) => {
-    dNew = val;
-    updateConcentration();
-  });
-
-  mwSliderNew.setCallback((val) => {
-    MWNew = val;
-    updateConcentration();
-  });
-
-  updateConcentration();
+  initPlot();
+  initMainGUI();
+  initSecondaryGUI();
+  initHalfLifeGUI();
+  initProductGUI();
+  initWtToMMGUI();
 
   updateEquations();
 
@@ -544,6 +384,141 @@ function setup() {
   attPlot.addFuncs(AttenuationFunction);
 }
 
+function initPlot() {
+  attPlot = new PlotCanvas(this);
+  attPlot.plotSetup();
+  attPlot.GPLOT.getXAxis().getAxisLabel().setText("Depth (\u03BCm)");
+  attPlot.GPLOT.getYAxis().getAxisLabel().setText("Intensity (mW/cm\u00B2)");
+  attPlot.GPLOT.getTitle().setText("Attenuation Due to One Absorber");
+}
+
+function initMainGUI() {
+  gui = createGui('Plot Controls', clientWidth, attPlot.GPLOT.mar[2]);
+  const parent = gui.prototype._panel;
+
+  const sliders = [
+    new MySlider('Conc', 0, 1000, Conc, 0.1, 'Absorber Concentration', 'mM'),
+    new MySlider('Absorb', 0, 5000, Absorb, 0.1, 'Napierian Absorptivity', 'L/mol-cm'),
+    new MySlider('Intensity', 0, 100, Intensity, 0.01, 'Incident Intensity', 'mW/cm\u00B2'),
+    new MySlider('Depth', 15, 2000, Depth, 1, 'Depth', '\u03BCm')
+  ];
+  const callbacks = [
+    (val) => Conc = val,
+    (val) => Absorb = val,
+    (val) => Intensity = val,
+    (val) => Depth = val
+  ];
+
+  sliders.forEach((slider, i) => {
+    slider.attachParent(parent);
+    slider.setCallback(callbacks[i]);
+  });
+}
+
+function initSecondaryGUI() {
+  gui2 = createGui('Additional Variables for Half-life', clientWidth, secondaryGuiTopOffset + attPlot.GPLOT.mar[2]);
+  const gui2parent = gui2.prototype._panel;
+
+  const laSlider = new MySlider('Wavelength', 200, 600, Wavelength, 0.1, 'Wavelength', 'nm');
+  laSlider.attachParent(gui2parent);
+  laSlider.setCallback((val) => Wavelength = val);
+
+  const qySlider = new MySlider('QY', 0, 1, QY, 0.01, 'Quantum Yield', '');
+  qySlider.attachParent(gui2parent);
+  qySlider.setCallback((val) => QY = val);
+}
+
+function initHalfLifeGUI() {
+  textGui = createGui('Results', resultsPanelLeft, resultsPanelTopOffset);
+  textGui.prototype._panel.className = "qs_main text-gui";
+  initHalfLifeText(textGui.prototype._panel);
+}
+
+function initProductGUI() {
+  productGui = createGui('Napierian Absorptivity', productPanelLeftMargin, productPanelTopOffset);
+  const parent = productGui.prototype._panel;
+
+  const sliders = [
+    new ProductSlider('prodAbsorb', 0, 3, productAbsorbance, 0.001, 'Absorbance', ''),
+    new ProductSlider('prodConc', 0, 500, productConcentration, 0.01, 'Concentration Absorber', 'mM'),
+    new ProductSlider('prodPathLength', 0, 5, productThickness, 0.001, 'Path Length', 'cm')
+  ];
+
+  sliders.forEach(slider => slider.attachParent(parent));
+
+  const resultDiv = document.createElement('div');
+  Object.assign(resultDiv.style, {
+    marginTop: '10px',
+    fontWeight: 'bold',
+    width: '100%',
+    textAlign: 'center',
+    flexBasis: '100%'
+  });
+  parent.appendChild(resultDiv);
+
+  function updateProductValue() {
+    if (productConcentration === 0) {
+      resultDiv.textContent = 'Product: Concentration cannot be zero';
+      return;
+    }
+    const value = Math.log(10) * productAbsorbance / productThickness / productConcentration * 1e3;
+    resultDiv.innerHTML = `
+      <div style="font-weight:bold;">Napierian Absorptivity:</div>
+      <div>${value.toFixed(1)} L/mol-cm</div>
+    `;
+    loop();
+  }
+
+  sliders[0].setCallback(val => { productAbsorbance = val; updateProductValue(); });
+  sliders[1].setCallback(val => { productConcentration = val; updateProductValue(); });
+  sliders[2].setCallback(val => { productThickness = val; updateProductValue(); });
+
+  updateProductValue();
+}
+
+function initWtToMMGUI() {
+  const newGuiLeft = productPanelLeftMargin + productPanelWidth + panelHorizontalSpacing;
+  const newGui = createGui('wt% to mM conversion', newGuiLeft, productPanelTopOffset);
+  const parent = newGui.prototype._panel;
+
+  let concNew = 0.1, dNew = 0.786, MWNew = 348.37;
+
+  const sliders = [
+    new ProductSlider('conc_wt', 0, 10, concNew, 0.001, 'Concentration Absorber', 'wt%'),
+    new ProductSlider('density', 0, 2, dNew, 0.001, 'Density', 'g/mL'),
+    new ProductSlider('mol_weight', 0, 1000, MWNew, 0.01, 'Absorber Molecular Weight', 'g/mol')
+  ];
+  sliders.forEach(slider => slider.attachParent(parent));
+
+  const outputDiv = document.createElement('div');
+  Object.assign(outputDiv.style, {
+    marginTop: '10px',
+    fontWeight: 'bold',
+    width: '100%',
+    textAlign: 'center',
+    flexBasis: '100%'
+  });
+  parent.appendChild(outputDiv);
+
+  function updateConcentration() {
+    if (MWNew === 0) {
+      outputDiv.textContent = 'Molecular Weight cannot be zero';
+      return;
+    }
+    const concentration_mM = (concNew * dNew / MWNew) * 1e4;
+    outputDiv.innerHTML = `
+      <div style="font-weight:bold;">Concentration:</div>
+      <div>${concentration_mM.toFixed(2)} mM</div>
+    `;
+    loop();
+  }
+
+  sliders[0].setCallback(val => { concNew = val; updateConcentration(); });
+  sliders[1].setCallback(val => { dNew = val; updateConcentration(); });
+  sliders[2].setCallback(val => { MWNew = val; updateConcentration(); });
+
+  updateConcentration();
+}
 
 function mouseMoved() {
   if (!attPlot || !AttenuationFunction) return;
