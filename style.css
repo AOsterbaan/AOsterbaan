@@ -8,16 +8,17 @@ html, body {
 body {
   margin: 0;
   display: flex;
-
+  padding-bottom: 50px;
   /* This centers our sketch horizontally. */
   justify-content: left;
 
   /* This centers our sketch vertically. */
   align-items: top;
-
+  padding-bottom: 160px; /* this value ensures white space at bottom */
 
 }
 
 .text-gui {
   width: max-content !important;
 }
+
