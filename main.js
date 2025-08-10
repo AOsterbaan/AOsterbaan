@@ -2,12 +2,12 @@
 
 /**
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- *           GLOBAL VARIABLES         
+ *           GLOBAL VARIABLES
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
 var clientWidth = Math.max(200, window.innerWidth - 250);
-var clientHeight = 500
-//GUI setup
+var clientHeight = 500;
+// GUI setup
 var gui;
 var gui2;
 var textGui;
@@ -17,7 +17,7 @@ var Absorb = 510;
 var Intensity = 10;
 var Depth = 500;
 var Wavelength = 405;
-var QY = .55;
+var QY = 0.55;
 // Graphing Function Prep
 var attPlot;
 var equation;
@@ -31,14 +31,31 @@ var MDh = 0;
 var MDm = 0;
 var MDs = 0;
 
+// Cursor tracking (moved to top so it's available everywhere)
+let cursorXVal = null;
+let cursorYVal = null;
+// Variables for snapped cursor
+let snapX = null;
+let snapY = null;
+
+/**
+ * Helper: exact attenuation function in JS (used to snap to curve)
+ * y(x) = Intensity * exp(-Absorb * Conc / 1e7 * x)
+ */
+function attenuationAt(x) {
+  return Intensity * Math.exp(-1 * Absorb * Conc / 1e7 * x);
+}
+
 /**
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  * Event handler: updating equations
- *    when the slider moves        
+ *    when the slider moves
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
 function updateEquations() {
-  equation = `${Intensity} * ${Math.exp(1)} ^ (-1 * ${Absorb} * ${Conc} / 10^7 * x)`
+  // keep the string for Plot parser unchanged in case your Plot object uses it.
+  // (You can change the expression format here if your Plot parser expects a different syntax.)
+  equation = `${Intensity} * ${Math.exp(1)} ^ (-1 * ${Absorb} * ${Conc} / 10^7 * x)`;
 }
 
 /**
@@ -47,20 +64,7 @@ function updateEquations() {
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
 
-// In Vanilla.js, interactions are handled by attaching 
-// event listeners to components in the DOM (browser page's memory).
-
-// Here we will describe a class to attach the event listeners for sliders for us.
-// Under the hood, this is the same as what p5.gui.js is doing, only we can tell it 
-// exactly how we want our sliders to look.
-
-/**
- * Abstraction class to set and handle slider logic. Basically, this avoids having to create each slider in the index.html file,
- *   and puts logic behind it with event listeners. This is similar to how p5.gui works, but with more flexibility.
- */
-
-
-
+// ... MySlider class unchanged (kept exactly as you provided) ...
 class MySlider {
   constructor(key, min, max, init, step, label, units) {
     this.min = min;
@@ -203,14 +207,6 @@ class MySlider {
   }
 }
 
-
-
-
-   
-
-
-
-
 /**
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  * Half-life Text Box
@@ -234,7 +230,8 @@ function initHalfLifeText(parent) {
   parent.appendChild(hlDiv);
 
   // Create a label to write info to
-  hlLabel.id = `${key}-label`;
+  // ---- FIXED: key was undefined in your original code; use a stable id instead
+  hlLabel.id = `hl-label`;
   hlLabel.className = "qs_label";
   hlDiv.appendChild(hlLabel);
 }
@@ -264,13 +261,13 @@ function updateHalfLifeText() {
 
 /**
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * What to do when the browser is resized         
+ * What to do when the browser is resized
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
 function windowResized() {
   // retrieve the new client width
   clientWidth = Math.max(200, window.innerWidth - 250);
-  clientHeight = 500
+  clientHeight = 500;
 
   // resize the canvas and plot, reposition the GUI 
   resizeCanvas(clientWidth, clientHeight);
@@ -283,7 +280,7 @@ function windowResized() {
 
 /**
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- *        Set up the canvas         
+ *        Set up the canvas
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
 function setup() {
@@ -294,16 +291,12 @@ function setup() {
   attPlot.plotSetup();
   attPlot.GPLOT.getXAxis().getAxisLabel().setText("Depth (\u03BCm)");
   attPlot.GPLOT.getYAxis().getAxisLabel().setText("Intensity (mW/cm\u00B2)");
-  //attPlot.GPLOT.getYAxis().getAxisLabel().textSize(24)
-  //-----Investigate how to change font size-----
   attPlot.GPLOT.getTitle().setText("Attenuation Due to One Absorber");
 
   // Create the GUI using p5.gui.js
   gui = createGui('Plot Controls', clientWidth, attPlot.GPLOT.mar[2]);
   const parent = gui.prototype._panel;
   // Create sliders
-  // Const is block scoped, so if you need to refer to the sliders elsewhere, move the decalrations outside of this function, then create them in this function.
-  // JS has a garbage collector, but since these objects attach event listeners in the DOM, they won't be deleted when they are dereferenced.
   const concSlider = new MySlider('Conc'     ,  0, 1000,      Conc,  0.1, 'Absorber Concentration', 'mM');
   const absSlider  = new MySlider('Absorb'   ,  0, 5000,    Absorb,  0.1, 'Napierian Absorbtivity', 'L/mol-cm');
   const intSlider  = new MySlider('Intensity',  0,  100, Intensity, 0.01,     'Incident Intensity', 'mW/cm\u00B2');
@@ -331,12 +324,13 @@ function setup() {
   qySlider.setCallback((val) => QY = val);
 
   textGui = createGui('Results', 0, clientHeight);
-  // Edit the style to increase the with
+  // Edit the style to increase the width
   textGui.prototype._panel.className = "qs_main text-gui";
   initHalfLifeText(textGui.prototype._panel);
 
   updateEquations();
 
+  // create the function plot (keeps using the equation string for backwards compatibility)
   AttenuationFunction = new Plot(equation, "x", 0, Depth);
   AttenuationFunction.lineThickness = 5;
 
@@ -345,39 +339,107 @@ function setup() {
 
 /**
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- *          Main Program Loop       
+ *          Main Program Loop
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
+
+function mouseMoved() {
+  if (!attPlot || !AttenuationFunction) return;
+
+  const mar = attPlot.GPLOT.mar;
+  // Adjust margins consistently here
+  const marginLeft = mar[0] + 10;
+  const marginRight = mar[1] - 40;
+  const marginTop = mar[2];
+  const marginBottom = mar[3] + 30;
+
+  if (mouseX < 0 || mouseX > clientWidth || mouseY < 0 || mouseY > clientHeight) {
+    snapX = null;
+    snapY = null;
+    loop();
+    return;
+  }
+
+  const dataXMin = 0;
+  const dataXMax = Depth;
+
+  const plotWidth = clientWidth - marginLeft - marginRight;
+
+  const mouseXVal = dataXMin + ((mouseX - marginLeft) / plotWidth) * (dataXMax - dataXMin);
+
+  snapX = Math.min(Math.max(mouseXVal, dataXMin), dataXMax);
+  snapY = attenuationAt(snapX);
+
+  loop();
+}
+
 function draw() {
-  //Plotting
   clear();
   updateEquations();
 
   AttenuationFunction.update(equation, Depth);
-  attPlot.GPLOT.setXLim.apply(attPlot.GPLOT, [0, Depth]);
-  attPlot.GPLOT.setYLim.apply(attPlot.GPLOT, [0, Intensity]);
 
+  attPlot.GPLOT.setXLim(0, Depth);
+  attPlot.GPLOT.setYLim(0, Intensity);
   attPlot.plotDraw();
 
-  // Additional Calcs--------------- Add with text below the Graph
-  //10% Attenuation (micron):
+  if (snapX !== null && snapY !== null) {
+    const mar = attPlot.GPLOT.mar;
+    // Use the same adjusted margins as in mouseMoved
+    const marginLeft = mar[0] + 10;
+    const marginRight = mar[1] - 40;
+    const marginTop = mar[2];
+    const marginBottom = mar[3] + 30;
+
+    const dataXMin = 0;
+    const dataXMax = Depth;
+    const dataYMin = 0;
+    const dataYMax = Intensity;
+
+    const plotWidth = clientWidth - marginLeft - marginRight;
+    const plotHeight = clientHeight - marginTop - marginBottom;
+
+    const px = marginLeft + ((snapX - dataXMin) / (dataXMax - dataXMin)) * plotWidth;
+    const py = marginTop + plotHeight - ((snapY - dataYMin) / (dataYMax - dataYMin)) * plotHeight;
+
+    stroke(100, 180, 255);  // light blue stroke
+    fill(100, 180, 255, 180); // light blue fill with some transparency
+    ellipse(px, py, 12, 12);  // larger ellipse (12x12)
+
+
+    noStroke();
+    fill(0);
+    textSize(14);
+    text(`Depth: ${snapX.toFixed(2)} \u03BCm`, px + 10, py - 20);
+    text(`Intensity: ${snapY.toFixed(2)} mW/cm\u00B2`, px + 10, py);
+  }
+
+  // Calculations for half-life etc.
   A10 = Math.round(-1 * 10 ** 7 / Absorb / Conc * Math.log(0.9));
-  console.log(A10);
-  //20% Attenuation (micron):
   A20 = Math.round(-1 * 10 ** 7 / Absorb / Conc * Math.log(0.8));
-  //Initiator Half-life
-  //@Exposed Surface -- hours, min, sec
-  const es = Math.round(Math.log(2) / (1000 * QY * Absorb * (Intensity / (119624 / Wavelength) / 10 ** 6)));
+
+  const es = Math.round(
+    Math.log(2) / (1000 * QY * Absorb * (Intensity / (119624 / Wavelength) / 10 ** 6))
+  );
   ESh = Math.floor(es / 3600);
   ESm = Math.round((es % 3600) / 60);
   ESs = es % 60;
-  //@Maximum Depth -- hours, min, sec
-  const md = Math.round(Math.log(2) / (1000 * QY * Absorb * (Intensity * Math.exp(-1*Absorb * Conc * Depth / 10 ** 7) / (119624 / Wavelength) / 10 ** 6)));
+
+  const md = Math.round(
+    Math.log(2) / (1000 * QY * Absorb *
+      (Intensity * Math.exp(-1 * Absorb * Conc * Depth / 10 ** 7) /
+      (119624 / Wavelength) / 10 ** 6))
+  );
   MDh = Math.floor(md / 3600);
   MDm = Math.round((md % 3600) / 60);
   MDs = md % 60;
+
   updateHalfLifeText();
 
-  // Set no loop here so the simulation won't continue to run at 60 fps
   noLoop();
 }
+
+
+
+
+
