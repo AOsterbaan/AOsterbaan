@@ -8,7 +8,7 @@
 const canvasWidthMargin = 250;  // reserved width for side panels (used in clientWidth calc)
 const canvasHeight = 500;
 
-let clientWidth = Math.max(200, window.innerWidth - canvasWidthMargin);
+let clientWidth = Math.max(400, window.innerWidth - canvasWidthMargin);
 let clientHeight = canvasHeight;
 
 // === Layout Position Variables ===
@@ -353,7 +353,7 @@ function setPanelPosition(guiObject, left, top) {
 }
 
 function windowResized() {
-  clientWidth = Math.max(200, window.innerWidth - canvasWidthMargin);
+  clientWidth = Math.max(400, window.innerWidth - canvasWidthMargin);
   clientHeight = canvasHeight;
 
   resizeCanvas(clientWidth, clientHeight);
