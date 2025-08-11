@@ -413,13 +413,9 @@ function updateHalfLifeText() {
 
 // Helper function for clean panel positioning
 function setPanelPosition(guiObject, left, top) {
-  if (typeof guiObject.setPosition === 'function') {
-    guiObject.setPosition(left, top);
-  }
-  if (guiObject._panel) {
-    guiObject._panel.style.left = left + 'px';
-    guiObject._panel.style.top = top + 'px';
-  }
+  guiObject.prototype.setPosition(left, top);
+  guiObject.prototype._panel.style.left = left + 'px';
+  guiObject.prototype._panel.style.top = top + 'px';
 }
 
 function windowResized() {
@@ -430,13 +426,13 @@ function windowResized() {
   attPlot.GPLOT.setOuterDim(clientWidth, clientHeight);
   attPlot.GPLOT.setPos(0, 0);
 
-  // Use helper to set GUI panel positions safely
-  setPanelPosition(gui, clientWidth, attPlot.GPLOT.mar[2]);
-  setPanelPosition(gui2, clientWidth, secondaryGuiTopOffset + attPlot.GPLOT.mar[2]);
+  gui.prototype.setPosition(clientWidth, attPlot.GPLOT.mar[2]);
+  gui2.prototype.setPosition(clientWidth, secondaryGuiTopOffset + attPlot.GPLOT.mar[2]);
 
   setPanelPosition(textGui, resultsPanelLeft, resultsPanelTopOffset);
   setPanelPosition(productGui, productPanelLeftMargin, productPanelTopOffset);
 }
+
 
 
 
@@ -462,7 +458,7 @@ function initPlot() {
   attPlot.plotSetup();
 
   // Set explicit base margins (you can adjust these values)
-  attPlot.GPLOT.mar = [60, 60, 50, 50]; // left, right, top, bottom
+  //attPlot.GPLOT.mar = [60, 60, 50, 50]; // left, right, top, bottom
 
   attPlot.GPLOT.getXAxis().getAxisLabel().setText("Depth (\u03BCm)");
   attPlot.GPLOT.getYAxis().getAxisLabel().setText("Intensity (mW/cm\u00B2)");
@@ -653,10 +649,10 @@ function draw() {
   attPlot.plotDraw();
 
   const mar = attPlot.GPLOT.mar;
-  const marginLeft = mar[0];
-  const marginRight = mar[1]-20;
+  const marginLeft = mar[0]+10;
+  const marginRight = mar[1]-40;
   const marginTop = mar[2];
-  const marginBottom = mar[3];
+  const marginBottom = mar[3]+30;
 
   const plotWidth = attPlot.GPLOT.outerDim[0] - marginLeft - marginRight;
   const plotHeight = attPlot.GPLOT.outerDim[1] - marginTop - marginBottom;
