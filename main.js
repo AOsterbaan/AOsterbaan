@@ -352,7 +352,7 @@ function initPlot() {
 
   attPlot.GPLOT.getXAxis().getAxisLabel().setText("Depth (\u03BCm)");
   attPlot.GPLOT.getYAxis().getAxisLabel().setText("Intensity (mW/cm²)");
-  attPlot.GPLOT.getTitle().setText("Attenuation due to one absorber (monochromatic source)");
+  attPlot.GPLOT.getTitle().setText("Attenuation due to one absorber (monochromatic source");
 
   attPlot.GPLOT.getXAxis().getAxisLabel().setFontSize(16);
   attPlot.GPLOT.getYAxis().getAxisLabel().setFontSize(16);
@@ -453,33 +453,46 @@ function draw() {
   const Ae  = -1e7 / (Absorb * Conc) * Math.log(0.367879);
 
   const depths = [
-  { depth: A10, color: [255, 100, 100], label: "90%" },
-  { depth: A20, color: [255, 180, 50], label: "80%" },
-  { depth: Ae,  color: [128, 0, 128], label: "1/e (Dₚ)" }
-];
+    { depth: A10, color: [255, 100, 100], label: "90%" },
+    { depth: A20, color: [255, 180, 50], label: "80%" },
+    { depth: Ae,  color: [128, 0, 128], label: "1/e (Dₚ)" }
+  ];
 
-depths.forEach(d => {
-  const pxLine = marginLeft + (d.depth / Depth) * plotWidth;
-  if (pxLine > marginLeft + plotWidth || pxLine < marginLeft) return;
+  // Track previously drawn labels for horizontal proximity
+  let usedLabels = [];
 
-  // Draw vertical line
-  stroke(...d.color, 150);
-  strokeWeight(1.5);
-  line(pxLine, marginTop, pxLine, marginTop + plotHeight);
+  depths.forEach(d => {
+    const pxLine = marginLeft + (d.depth / Depth) * plotWidth;
+    if (pxLine > marginLeft + plotWidth || pxLine < marginLeft) return;
 
-  // Draw glowing label
-  const labelX = pxLine + 4;
-  const labelY = marginTop + plotHeight - 2;
+    // Draw vertical line
+    stroke(...d.color, 150);
+    strokeWeight(1.5);
+    line(pxLine, marginTop, pxLine, marginTop + plotHeight);
 
-  textSize(16);       // larger font
-  textAlign(LEFT, BOTTOM);
+    // Base Y for label (bottom of plot)
+    let labelY = marginTop + plotHeight - 2;
 
-  // Solid label on top
-  noStroke();
-  fill(...d.color);
-  text(d.label, labelX, labelY);
-});
+    // Only stagger if another label is close horizontally
+    const minSpacingX = 40;  // horizontal distance threshold
+    const minSpacingY = 20;  // vertical spacing if overlapping
+    usedLabels.forEach(ul => {
+      if (Math.abs(pxLine - ul.x) < minSpacingX) {
+        labelY = ul.y - minSpacingY; // stagger upwards
+      }
+    });
 
+    // Save this label's position for future comparisons
+    usedLabels.push({ x: pxLine, y: labelY });
+
+    // Draw label
+    const labelX = pxLine + 4;
+    textSize(16);
+    textAlign(LEFT, BOTTOM);
+    noStroke();
+    fill(...d.color);
+    text(d.label, labelX, labelY);
+  });
 
   // Draw moving cursor line if mouse is over plot
   if (snapX !== null && snapY !== null) {
@@ -506,6 +519,8 @@ depths.forEach(d => {
   MDh = formatTimeWithSigFig(md_sec, 3);
   updateHalfLifeText();
 }
+
+
 
 function mouseMoved() {
   if (!attPlot || !AttenuationFunction) return;
