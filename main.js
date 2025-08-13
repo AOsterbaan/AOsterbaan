@@ -6,6 +6,10 @@
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
 
+const PAD = 20;
+var panelsAreHidden = true;
+var panelsAreHidden2 = true;
+
 // helper: format any displayed number to 3 significant figures
 // Format number with up to 'sig' significant digits but never use scientific notation
 function formatSigFig(num, sig = 3) {
@@ -80,7 +84,7 @@ const mainGuiTop = 0;
 const mainGuiLeft = 0;
 const mainGuiWidth = clientWidth;  // dynamic width of main GUI panel
 
-const secondaryGuiTopOffset = 400;  // vertical offset for secondary GUI (gui2)
+const secondaryGuiTopOffset = 320;  // vertical offset for secondary GUI (gui2)
 const secondaryGuiLeft = 0;
 const secondaryGuiWidth = clientWidth; // same width as main GUI by default
 
@@ -90,9 +94,9 @@ const resultsPanelTopOffset = canvasHeight + 10; // just below canvas
 
 // PRODUCT PANEL layout variables
 const productPanelLeftMargin = 10;      
-const productPanelTopOffset = resultsPanelTopOffset + 200;  // below results panel with spacing
+const productPanelTopOffset = resultsPanelTopOffset + 100;  // below results panel with spacing
 const productPanelWidth = 200;          
-const productPanelHeight = 100;         
+const productPanelHeight = 250;         
 
 // Margins and spacing
 const panelHorizontalSpacing = 10;      
@@ -103,6 +107,7 @@ let gui;
 let gui2;
 let textGui;
 let productGui;
+let wtGui;
 
 // Variables for Calculations
 let Conc = 50;
@@ -150,131 +155,6 @@ function updateEquations() {
   equation = `${formatSigFig(Intensity, 3)} * e^(-1 * ${formatSigFig(Absorb, 3)} * ${formatSigFig(Conc, 3)} / 10^7 * x)`;
 }
 
-// Slider class with plus/minus buttons
-class MySlider {
-  constructor(key, min, max, init, step, label, units) {
-    this.min = min;
-    this.max = max;
-    this.step = step;
-    this.label = label;
-    this.units = units;
-    this.val = init;
-
-    this.div = document.createElement("div");
-    this.div.className = "qs_container";
-
-    this.labelDiv = document.createElement("div");
-    this.labelDiv.className = "qs_label";
-    this.labelDiv.innerHTML = `<b>${label}:</b> `;
-
-    this.valBox = document.createElement("input");
-    this.valBox.type = "text";
-    this.valBox.id = key + "-value-box";
-    this.valBox.style.width = "60px";
-
-    // display using 3 significant figures
-    this.valBox.value = formatSigFig(init, 3);
-
-    this.labelDiv.appendChild(this.valBox);
-    this.labelDiv.append(` ${units}`);
-
-    this.div.appendChild(this.labelDiv);
-
-    this.sliderDiv = document.createElement("input");
-    this.sliderDiv.type = "range";
-    this.sliderDiv.min = min;
-    this.sliderDiv.max = max;
-    this.sliderDiv.step = step;
-    this.sliderDiv.value = init;
-    this.sliderDiv.style.width = "160px";
-
-    this.div.appendChild(this.sliderDiv);
-
-    this.minusBtn = document.createElement("button");
-    this.minusBtn.type = "button";
-    this.minusBtn.className = "btn btn-secondary";
-    this.minusBtn.textContent = "-";
-
-    this.plusBtn = document.createElement("button");
-    this.plusBtn.type = "button";
-    this.plusBtn.className = "btn btn-secondary";
-    this.plusBtn.textContent = "+";
-
-    this.div.appendChild(this.minusBtn);
-    this.div.appendChild(this.plusBtn);
-
-    this.callback = null;
-
-    this.addEventListeners();
-  }
-
-  addEventListeners = () => {
-    this.sliderDiv.addEventListener("input", (event) => {
-      this.val = Number(event.target.value);
-      this.onUpdate();
-    });
-
-    this.valBox.addEventListener("input", (e) => {
-      const str = e.target.value;
-      if (str === '' || str === '-' || str === '.' || str === '-.') return;
-
-      const num = Number(str);
-      if (!isNaN(num)) {
-        this.val = num;
-        this.onUpdate(false);
-      }
-    });
-
-    this.valBox.addEventListener("blur", () => {
-      const val = this.valBox.value.trim();
-      const num = Number(val);
-      const validDecimalRegex = /^[-+]?\d*\.?\d+$/;
-
-      if (val === '' || isNaN(num) || !validDecimalRegex.test(val)) {
-        alert('Please enter a valid decimal number.');
-        this.valBox.value = formatSigFig(this.val, 3);
-        this.valBox.focus();
-      } else {
-        this.val = num;
-        this.onUpdate(true);
-      }
-    });
-
-    this.minusBtn.addEventListener("click", () => {
-      this.val = Math.max(this.min, this.val - this.step);
-      this.onUpdate(true);
-    });
-
-    this.plusBtn.addEventListener("click", () => {
-      this.val = Math.min(this.max, this.val + this.step);
-      this.onUpdate(true);
-    });
-  }
-
-  onUpdate = (round = true) => {
-    let sliderVal = this.val;
-    if (sliderVal < this.min) sliderVal = this.min;
-    if (sliderVal > this.max) sliderVal = this.max;
-    this.sliderDiv.value = `${sliderVal}`;
-
-    if (round) {
-      // show 3 significant figures in the text box
-      this.valBox.value = formatSigFig(this.val, 3);
-    }
-
-    if (this.callback) this.callback(this.val);
-
-    if (typeof loop === "function") loop();
-  }
-
-  setCallback = (callback) => {
-    this.callback = callback;
-  }
-
-  attachParent = (parent) => {
-    parent.appendChild(this.div);
-  }
-}
 
 // ProductSlider without plus/minus buttons
 class ProductSlider {
@@ -394,9 +274,7 @@ function initHalfLifeText(parent) {
 
 function updateHalfLifeText() {
   hlLabel.innerHTML = `
-<p>
-  Default values are an approximation for TPO<br>
-</p>
+
 <p>
   At what depth are you optically thin?<br>
   <b>10% attenuation:</b> ${A10} µm<br>
@@ -419,25 +297,36 @@ function setPanelPosition(guiObject, left, top) {
 }
 
 function windowResized() {
-  clientWidth = Math.max(400, window.innerWidth - canvasWidthMargin);
-  clientHeight = canvasHeight;
+  clientWidth = Math.max(600, window.innerWidth - canvasWidthMargin);
+  clientHeight = window.innerHeight - 200;
+
+  // Enforce a 4/3 Aspect Ratio
+  const asp = 4 / 3;
+  clientHeight = Math.min(clientHeight, clientWidth / asp - 200);
+  clientWidth = clientHeight * asp;
 
   resizeCanvas(clientWidth, clientHeight);
   attPlot.GPLOT.setOuterDim(clientWidth, clientHeight);
   attPlot.GPLOT.setPos(0, 0);
 
-  gui.prototype.setPosition(clientWidth, attPlot.GPLOT.mar[2]);
-  gui2.prototype.setPosition(clientWidth, secondaryGuiTopOffset + attPlot.GPLOT.mar[2]);
+  const base = document.getElementById("plot-wrapper").getBoundingClientRect();
+  const right = base.right + PAD;
+  const left = base.left - PAD;
+  const top = PAD;
 
-  setPanelPosition(textGui, resultsPanelLeft, resultsPanelTopOffset);
-  setPanelPosition(productGui, productPanelLeftMargin, productPanelTopOffset);
+  gui.prototype.setPosition(right, top);
+  gui2.prototype.setPosition(right, secondaryGuiTopOffset + top);
+
+  setPanelPosition(textGui, left+80, base.bottom);
+  setPanelPosition(productGui, left - productPanelWidth, top);
+  setPanelPosition(wtGui, left - productPanelWidth, top + productPanelHeight + PAD);
 }
 
 
 
-
 function setup() {
-  createCanvas(clientWidth, clientHeight);
+  const cnv = createCanvas(clientWidth, clientHeight);
+  cnv.parent(document.getElementById("plot-wrapper"))
 
   initPlot();
   initMainGUI();
@@ -451,6 +340,21 @@ function setup() {
   AttenuationFunction = new Plot(equation, "x", 0, Depth);
   AttenuationFunction.lineThickness = 1; //for reference tuning margins
   attPlot.addFuncs(AttenuationFunction);
+  windowResized();
+  togglePanels(true);
+  togglePanels2(true);
+
+  // Event listener for button
+  document.getElementById("calc-btn").addEventListener("click", () => {
+    panelsAreHidden = !panelsAreHidden;
+    togglePanels(panelsAreHidden);
+  });
+
+  // Event listener for half-life button
+  document.getElementById("half-btn").addEventListener("click", () => {
+    panelsAreHidden2 = !panelsAreHidden2;
+    togglePanels2(panelsAreHidden2);
+  });
 }
 
 function initPlot() {
@@ -467,11 +371,13 @@ function initPlot() {
   attPlot.GPLOT.getXAxis().getAxisLabel().setFontSize(16);
   attPlot.GPLOT.getYAxis().getAxisLabel().setFontSize(16);
 
+  attPlot.GPLOT.getXAxis().setFontSize(16);
+  attPlot.GPLOT.getYAxis().setFontSize(16);
+
   attPlot.GPLOT.getTitle().setFontSize(16);
 
   attPlot.GPLOT.setFontSize(16);
 }
-
 
 
 function initMainGUI() {
@@ -479,10 +385,10 @@ function initMainGUI() {
   const parent = gui.prototype._panel;
 
   const sliders = [
-    new MySlider('Conc', 0, 1000, Conc, 0.1, 'Absorber concentration', 'mM'),
-    new MySlider('Absorb', 0, 5000, Absorb, 0.1, 'Napierian absorptivity', 'L/mol-cm'),
-    new MySlider('Intensity', 0, 100, Intensity, 0.01, 'Incident intensity', 'mW/cm\u00B2'),
-    new MySlider('Depth', 15, 2000, Depth, 1, 'Depth', '\u03BCm')
+    new ProductSlider('Conc', 0, 1000, Conc, 0.1, 'Absorber concentration', 'mM'),
+    new ProductSlider('Absorb', 0, 5000, Absorb, 0.1, 'Napierian absorptivity', 'L/mol-cm'),
+    new ProductSlider('Intensity', 0, 100, Intensity, 0.01, 'Incident intensity', 'mW/cm\u00B2'),
+    new ProductSlider('Depth', 15, 2000, Depth, 1, 'Depth', '\u03BCm')
   ];
 
   const callbacks = [
@@ -496,23 +402,25 @@ function initMainGUI() {
     slider.attachParent(parent);
     slider.setCallback(callbacks[i]);
   });
+  
+  setPanelPosition(gui, window.innerWidth - gui.prototype._panel.offsetWidth - PAD, attPlot.GPLOT.mar[2]);
 }
 
 function initSecondaryGUI() {
   gui2 = createGui('Additional variables for half-life', clientWidth, secondaryGuiTopOffset + attPlot.GPLOT.mar[2]);
   const gui2parent = gui2.prototype._panel;
 
-  const laSlider = new MySlider('Wavelength', 200, 600, Wavelength, 0.1, 'Wavelength', 'nm');
+  const laSlider = new ProductSlider('Wavelength', 200, 600, Wavelength, 0.1, 'Wavelength', 'nm');
   laSlider.attachParent(gui2parent);
   laSlider.setCallback((val) => Wavelength = val);
 
-  const qySlider = new MySlider('QY', 0, 1, QY, 0.001, 'Quantum yield', '');
+  const qySlider = new ProductSlider('QY', 0, 1, QY, 0.001, 'Quantum yield', '');
   qySlider.attachParent(gui2parent);
   qySlider.setCallback((val) => QY = val);
 }
 
 function initHalfLifeGUI() {
-  textGui = createGui('Results', resultsPanelLeft, resultsPanelTopOffset);
+  textGui = createGui('Results', resultsPanelLeft, resultsPanelTopOffset+10000);
   textGui.prototype._panel.className = "qs_main text-gui";
   initHalfLifeText(textGui.prototype._panel);
 }
@@ -561,8 +469,8 @@ function initProductGUI() {
 
 function initWtToMMGUI() {
   const newGuiLeft = productPanelLeftMargin + productPanelWidth + panelHorizontalSpacing;
-  const newGui = createGui('wt% to mM conversion', newGuiLeft, productPanelTopOffset);
-  const parent = newGui.prototype._panel;
+  wtGui = createGui('wt% to mM conversion', newGuiLeft, productPanelTopOffset);
+  const parent = wtGui.prototype._panel;
 
   let concNew = 0.1, dNew = 0.786, MWNew = 348.37;
 
@@ -702,3 +610,47 @@ function draw() {
   noLoop();
 }
 
+// Hamburger menu
+function toggleMenu() {
+  const menu = document.getElementById('menu');
+  menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+}
+
+// click outside to close
+document.addEventListener('click', e => {
+  const menu = document.getElementById('menu');
+  const btn = document.querySelector('.menu-button');
+  if (!btn.contains(e.target) && !menu.contains(e.target)) {
+    menu.style.display = 'none';
+  }
+});
+
+// show/hide panels
+function togglePanels(hidden) {
+  // Get the panels
+  const pPanel = productGui.prototype._panel;
+  const wPanel = wtGui.prototype._panel;
+
+  if (hidden) {
+    pPanel.style.display = 'none';
+    wPanel.style.display = 'none';
+  } else {
+    pPanel.style.display = '';
+    wPanel.style.display = '';
+  }
+}
+
+// show/hide panels
+function togglePanels2(hidden) {
+  // Get the panels
+  const pPanel = gui2.prototype._panel;
+  const wPanel = textGui.prototype._panel;
+
+  if (hidden) {
+    pPanel.style.display = 'none';
+    wPanel.style.display = 'none';
+  } else {
+    pPanel.style.display = '';
+    wPanel.style.display = '';
+  }
+}
