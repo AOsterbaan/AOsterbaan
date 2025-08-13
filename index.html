@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html>
 	<head>
 
@@ -48,8 +48,8 @@
 					 <div id="dir-btn" type="button" class="btn btn-light btn-wide" data-bs-toggle="modal" data-bs-target="#directions-modal"> Directions </div>
 					 <div id="det-btn" type="button" class="btn btn-light btn-wide" data-bs-toggle="modal" data-bs-target="#details-modal"> Details </div>
 					 <div id="abt-btn" type="button" class="btn btn-light btn-wide" data-bs-toggle="modal" data-bs-target="#about-modal"> About </div>
-					 <div id="calc-btn" type="button" class="btn btn-light btn-wide"> Reference Calculations </div>
-					 <div id="half-btn" type="button" class="btn btn-light btn-wide"> Half-life Calculations </div>
+					 <div id="calc-btn" type="button" class="btn btn-light btn-wide"> Reference calculations </div>
+					 <div id="half-btn" type="button" class="btn btn-light btn-wide"> Initiator half-life </div>
 				</div>
 			</div>
 		</div>
@@ -80,11 +80,14 @@
 						key variables.
 						</p>
 						<p>
-						Default values are for diphenyl(2,4,6-trimethylbenzoyl)phosphine oxide (TPO), a common photoinitator, at 405 nm.
+						Default values are for diphenyl(2,4,6-trimethylbenzoyl)phosphine oxide (TPO), a common radical photoinitator, at 405 nm.
 						</p>
 						<p>
-						Additional features are available including:<br>
+						<b>Additional features are available including:</b><br>
 						1) Calculating Napierian absorptivity from UV-Vis data<br>
+							&nbsp;&nbsp;&nbsp;&nbsp;Napierian absorptivity is in base <i>e</i>, rather than base 10<br>
+							&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://www.sigmaaldrich.com/deepweb/assets/sigmaaldrich/marketing/global/documents/233/907/photoinitiators.pdf?srsltid=AfmBOopReVzCuZIFeb8s1t3-qecxE2sYJyzBLP0WUBbFslOgSUIdexkx" target="_blank" rel="noopener noreferrer">Sigma catalog</a><br>
+							&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://www.researchgate.net/profile/San-Ty/post/Formulating_UV_curable_resin_with_suspended_particles/attachment/5a782b744cde266d5888cb18/AS%3A590614525665281%401517824884894/download/Photoinitiators+for+UV+curing.pdf" target="_blank" rel="noopener noreferrer">Ciba catalog</a><br>
 						2) Converting wt% to mM <br>
 						3) Calculating initiator half-life
 						</p>
@@ -113,8 +116,58 @@
 					</div>
 					<div class="modal-body">
 						<p>
-						You can also add LaTeX via MathJax:
-						$$ \theta_0 = \frac{1}{2} $$
+
+<b><u>Plot details</u></b><br>
+$$
+\frac{dI}{dz} = -I \, \varepsilon \, [C]
+$$
+$$
+\frac{I}{I_0} = \exp(-\varepsilon \, [C] \, z)
+$$
+\( I \) – intensity of light at sample depth \( z \) \((\text{mW/cm}^2)\) <br>
+\( I_0 \) – initial intensity of light \((\text{mW/cm}^2)\) <br>
+\( \varepsilon \) – Napierian molar extinction coefficient (base \(e\)) \((\text{L/mol·cm})\) <br>
+\( [C] \) – concentration of chromophore (i.e., photoinitiator) \((\text{mol/L})\) <br>
+\( z \) – sample thickness \((\mu\text{m})\) <br>
+<br>
+
+<b><u>Napierian absorptivity details</u></b><br>
+$$
+A = \frac{\varepsilon \, [C] \, l}{\ln(10)}
+$$
+\( A \) – Absorbance (base 10) <br>
+\( \varepsilon \) – Napierian absorptivity \((\text{L/mol·cm})\) <br>
+\( l \) – path length \((\text{cm})\) <br>
+\( [C] \) – concentration of absorber \((\text{mM})\) <br>
+<br>
+
+<b><u>Initiator half-life</u></b><br>
+The energy of a photon is inversely proportional to the wavelength \(\lambda\). 
+This relationship is useful for converting light intensity from 
+\((\text{mW/cm}^2)\) to \((\text{Einstein/cm}^2)\), where \(1 \ \text{Einstein} = 1 \ \text{mol photons}\).
+
+$$
+E = \frac{h \, c \, N_A}{\lambda} 
+$$
+\( E \) – photon energy \((\text{J/mol})\) <br>
+\( h \) – Planck's constant \((6.6261 \times 10^{-34} \ \text{J·s})\) <br>
+\( c \) – speed of light \((2.9979 \times 10^{8} \ \text{m/s})\) <br>
+\( N_A \) – Avogadro's number \((6.022 \times 10^{23} \ \text{mol}^{-1})\) <br>
+\( \lambda \) – wavelength of light \((\text{nm})\) <br>
+<br>
+
+Half-life (assuming no diffusion, photo-bleaching, or photodarkening) is then:
+$$
+t_{1/2} = \frac{\ln(2) \, E}{\phi \, \varepsilon \, I}
+$$
+\( \phi \) – quantum yield \((\text{mol/Einstein})\) <br>
+\( \varepsilon \) – Napierian molar extinction coefficient (base \(e\)) \((\text{L/mol·cm})\) <br>
+\( I \) – light intensity \((\text{mW/cm}^2)\) <br>
+
+
+
+
+
 						</p>
 					</div>
 				</div>
@@ -144,7 +197,7 @@
 						This simulation was created in the Department of Chemical and Biological 
 						Engineering at University of Colorado Boulder for LearnChemE.com by 
 						Alexander Osterbaan under the direction of Professor John L. Falconer and 
-						Professor Christopher N. Bowman and with the assistance of Drew Smith. Address any questions or comments to LearnChemE@gmail.com.  
+						Professor Christopher N. Bowman and with the assistance of Drew Smith and Meagan Arguien. Address any questions or comments to LearnChemE@gmail.com.  
 						</p>
 					</div>
 				</div>
@@ -153,4 +206,4 @@
 
 	</body>
 
-</html> 
+</html>
