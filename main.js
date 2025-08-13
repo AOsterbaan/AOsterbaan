@@ -352,7 +352,7 @@ function initPlot() {
 
   attPlot.GPLOT.getXAxis().getAxisLabel().setText("Depth (\u03BCm)");
   attPlot.GPLOT.getYAxis().getAxisLabel().setText("Intensity (mW/cm²)");
-  attPlot.GPLOT.getTitle().setText("Attenuation due to one absorber (monochromatic source");
+  attPlot.GPLOT.getTitle().setText("Attenuation due to one absorber (monochromatic source)");
 
   attPlot.GPLOT.getXAxis().getAxisLabel().setFontSize(16);
   attPlot.GPLOT.getYAxis().getAxisLabel().setFontSize(16);
