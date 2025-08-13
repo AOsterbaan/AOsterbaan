@@ -331,7 +331,7 @@ function setup() {
   updateEquations();
 
   AttenuationFunction = new Plot(equation, "x", 0, Depth);
-  AttenuationFunction.lineThickness = 1; //for reference tuning margins
+  AttenuationFunction.lineThickness = 0; //for reference tuning margins, else ==0 as needed for set-up
   attPlot.addFuncs(AttenuationFunction);
   windowResized();
   togglePanels(true);
@@ -545,7 +545,7 @@ function draw() {
   attPlot.GPLOT.getXAxis().setDrawTickLabels(true);
   attPlot.GPLOT.getYAxis().setDrawTickLabels(true);
 
-  // Draw base plot (axes, grid, ticks, labels)
+  // Draw base plot
   attPlot.plotDraw();
 
   const mar = attPlot.GPLOT.mar;
@@ -557,7 +557,7 @@ function draw() {
   const plotWidth = attPlot.GPLOT.outerDim[0] - marginLeft - marginRight;
   const plotHeight = attPlot.GPLOT.outerDim[1] - marginTop - marginBottom;
 
-  // Draw attenuation curve in blue
+  // Draw attenuation curve
   stroke(0, 100, 255);
   strokeWeight(3);
   noFill();
@@ -573,19 +573,22 @@ function draw() {
   // Fixed attenuation depths
   const A10 = -1e7 / (Absorb * Conc) * Math.log(0.9);
   const A20 = -1e7 / (Absorb * Conc) * Math.log(0.8);
+  const Ae = -1e7 / (Absorb * Conc) * Math.log(0.367879);
 
   const depths = [
     { depth: A10, color: [255, 100, 100], label: "90%" },
-    { depth: A20, color: [255, 180, 50], label: "80%" }
+    { depth: A20, color: [255, 180, 50], label: "80%" },
+    { depth: Ae, color: [128, 0, 128], label: "Dₚ" } // proper subscript
   ];
 
-  // Draw fixed attenuation lines with labels to the right, just above x-axis
+  // Draw fixed attenuation lines, disappear if past right edge
   depths.forEach(d => {
-    let pxLine = marginLeft + (d.depth / Depth) * plotWidth;
-    let pyTop = marginTop;
-    let pyBottom = marginTop + plotHeight;
+    const pxLine = marginLeft + (d.depth / Depth) * plotWidth;
+    if (pxLine > marginLeft + plotWidth) return; // completely skip drawing if beyond plot
 
-    // Thin, semi-transparent vertical line
+    const pyTop = marginTop;
+    const pyBottom = marginTop + plotHeight;
+
     stroke(...d.color, 150);
     strokeWeight(1.5);
     line(pxLine, pyTop, pxLine, pyBottom);
@@ -624,6 +627,8 @@ function draw() {
 
   noLoop();
 }
+
+
 
 
 
