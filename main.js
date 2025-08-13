@@ -10,71 +10,9 @@ const PAD = 20;
 var panelsAreHidden = true;
 var panelsAreHidden2 = true;
 
-// helper: format any displayed number to 3 significant figures
-// Format number with up to 'sig' significant digits but never use scientific notation
-function formatSigFig(num, sig = 3) {
-  if (num === null || typeof num === 'undefined' || isNaN(Number(num))) return '';
-
-  num = Number(num);
-
-  // Handle zero separately
-  if (num === 0) return '0';
-
-  // Calculate order of magnitude (base 10 exponent)
-  const order = Math.floor(Math.log10(Math.abs(num)));
-
-  // If order >= sig - 1, show as integer with no decimals
-  if (order >= sig - 1) {
-    return num.toFixed(0);
-  }
-
-  // Else calculate decimals to keep 'sig' significant digits
-  const decimals = sig - 1 - order;
-
-  // Use toFixed with decimals, then trim trailing zeros
-  let str = num.toFixed(decimals);
-
-  // Remove trailing zeros and optional decimal point
-  str = str.replace(/\.?0+$/, '');
-
-  return str;
-}
-
-function formatTimeWithSigFig(seconds, sig = 3) {
-  if (seconds <= 0 || isNaN(seconds)) return "0 s";
-
-  const daySec = 86400;
-  const hourSec = 3600;
-  const minSec = 60;
-
-  let value, unit;
-
-  if (seconds >= daySec) {
-    value = seconds / daySec;
-    unit = "days";
-  } else if (seconds >= hourSec) {
-    value = seconds / hourSec;
-    unit = "h";
-  } else if (seconds >= minSec) {
-    value = seconds / minSec;
-    unit = "min";
-  } else {
-    value = seconds;
-    unit = "s";
-  }
-
-  // Format value to sig figs without scientific notation
-  let formatted = Number.parseFloat(value).toPrecision(sig);
-  
-  // Remove trailing zeros and possible decimal point if integer
-  formatted = formatted.replace(/\.?0+$/, '');
-
-  return `${formatted} ${unit}`;
-}
-
-
-const canvasWidthMargin = 250;  // reserved width for side panels (used in clientWidth calc)
 const canvasHeight = 500;
+const canvasHeightMax = 800;  // Max height in pixels (adjust as needed)
+const canvasWidthMargin = 20; // Any extra width margin you want
 
 let clientWidth = Math.max(400, window.innerWidth - canvasWidthMargin);
 let clientHeight = canvasHeight;
@@ -145,122 +83,15 @@ let productConcentration = 2.26;
 let productThickness = 1;            
 let productValue = 0;
 
-// Attenuation function
-function attenuationAt(x) {
-  return Intensity * Math.exp(-1 * Absorb * Conc / 1e7 * x);
-}
-
-function updateEquations() {
-  // use formatted numbers in the equation string so displayed equation also matches 3 sig figs
-  equation = `${formatSigFig(Intensity, 3)} * e^(-1 * ${formatSigFig(Absorb, 3)} * ${formatSigFig(Conc, 3)} / 10^7 * x)`;
-}
-
-
-// ProductSlider without plus/minus buttons
-class ProductSlider {
-  constructor(key, min, max, init, step, label, units) {
-    this.min = min;
-    this.max = max;
-    this.step = step;
-    this.label = label;
-    this.units = units;
-    this.val = init;
-
-    this.div = document.createElement("div");
-    this.div.className = "qs_container";
-
-    this.labelDiv = document.createElement("div");
-    this.labelDiv.className = "qs_label";
-    this.labelDiv.innerHTML = `<b>${label}:</b> `;
-
-    this.valBox = document.createElement("input");
-    this.valBox.type = "text";
-    this.valBox.id = key + "-value-box";
-    this.valBox.style.width = "60px";
-
-    // show init with 3 sig figs
-    this.valBox.value = formatSigFig(init, 3);
-
-    this.labelDiv.appendChild(this.valBox);
-    this.labelDiv.append(` ${units}`);
-
-    this.div.appendChild(this.labelDiv);
-
-    this.sliderDiv = document.createElement("input");
-    this.sliderDiv.type = "range";
-    this.sliderDiv.min = min;
-    this.sliderDiv.max = max;
-    this.sliderDiv.step = step;
-    this.sliderDiv.value = init;
-    this.sliderDiv.style.width = "160px";
-
-    this.div.appendChild(this.sliderDiv);
-
-    this.callback = null;
-
-    this.addEventListeners();
-  }
-
-  addEventListeners = () => {
-    this.sliderDiv.addEventListener("input", (event) => {
-      this.val = Number(event.target.value);
-      this.onUpdate();
-    });
-
-    this.valBox.addEventListener("input", (e) => {
-      const str = e.target.value;
-      if (str === '' || str === '-' || str === '.' || str === '-.') return;
-
-      const num = Number(str);
-      if (!isNaN(num)) {
-        this.val = num;
-        this.onUpdate(false);
-      }
-    });
-
-    this.valBox.addEventListener("blur", () => {
-      const val = this.valBox.value.trim();
-      const num = Number(val);
-      const validDecimalRegex = /^[-+]?\d*\.?\d+$/;
-
-      if (val === '' || isNaN(num) || !validDecimalRegex.test(val)) {
-        alert('Please enter a valid decimal number.');
-        this.valBox.value = formatSigFig(this.val, 3);
-        this.valBox.focus();
-      } else {
-        this.val = num;
-        this.onUpdate(true);
-      }
-    });
-  }
-
-  onUpdate = (round = true) => {
-    let sliderVal = this.val;
-    if (sliderVal < this.min) sliderVal = this.min;
-    if (sliderVal > this.max) sliderVal = this.max;
-    this.sliderDiv.value = `${sliderVal}`;
-
-    if (round) {
-      this.valBox.value = formatSigFig(this.val, 3);
-    }
-
-    if (this.callback) this.callback(this.val);
-
-    if (typeof loop === "function") loop();
-  }
-
-  setCallback = (callback) => {
-    this.callback = callback;
-  }
-
-  attachParent = (parent) => {
-    parent.appendChild(this.div);
-  }
-}
-
-// Half-life Text Box Setup
 const hlLabel = document.createElement("div");
 
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *           Helpers for Calculators
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+
+// Half-life Text Box Setup
 function initHalfLifeText(parent) {
   const hlDiv = document.createElement("div");
   hlDiv.id = `hl-container`;
@@ -281,100 +112,434 @@ function updateHalfLifeText() {
   `;
 }
 
-
-// Helper function for clean panel positioning
-function setPanelPosition(guiObject, left, top) {
-  guiObject.prototype.setPosition(left, top);
-  guiObject.prototype._panel.style.left = left + 'px';
-  guiObject.prototype._panel.style.top = top + 'px';
+// Attenuation function
+function attenuationAt(x) {
+  return Intensity * Math.exp(-1 * Absorb * Conc / 1e7 * x);
 }
 
+function updateEquations() {
+  // use formatted numbers in the equation string so displayed equation also matches 3 sig figs
+  equation = `${formatSigFig(Intensity, 3)} * e^(-1 * ${formatSigFig(Absorb, 3)} * ${formatSigFig(Conc, 3)} / 10^7 * x)`;
+}
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *           Slider Format(s)
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+
+// ProductSlider without plus/minus buttons
+class ProductSlider {
+  constructor(key, min, max, init, step, label, units) {
+    this.min = min;
+    this.max = max;
+    this.step = step;
+    this.label = label;
+    this.units = units;
+    this.val = init;
+
+    // Create container
+    this.div = document.createElement("div");
+    this.div.className = "qs_container";
+
+    // Label and value box
+    this.labelDiv = document.createElement("div");
+    this.labelDiv.className = "qs_label";
+    this.labelDiv.innerHTML = `<b>${label}:</b> `;
+    this.valBox = document.createElement("input");
+    this.valBox.type = "text";
+    this.valBox.style.width = "60px";
+    this.valBox.value = formatSigFig(init, 3);
+
+    this.labelDiv.appendChild(this.valBox);
+    this.labelDiv.append(` ${units}`);
+    this.div.appendChild(this.labelDiv);
+
+    // Slider element
+    this.sliderDiv = document.createElement("input");
+    this.sliderDiv.type = "range";
+    this.sliderDiv.min = min;
+    this.sliderDiv.max = max;
+    this.sliderDiv.step = step;
+    this.sliderDiv.value = init;
+    this.sliderDiv.style.width = "160px";
+    this.div.appendChild(this.sliderDiv);
+
+    this.callback = null;
+    this.addEventListeners();
+  }
+
+  addEventListeners = () => {
+    // Slider moves
+    this.sliderDiv.addEventListener("input", (event) => {
+      this.val = Number(event.target.value);
+      this.valBox.value = formatSigFig(this.val, 3);
+      if (this.callback) this.callback(this.val);
+      updateCurve();
+    });
+
+    // Textbox input
+    this.valBox.addEventListener("input", (e) => {
+      const str = e.target.value;
+      if (str === '' || str === '-' || str === '.' || str === '-.') return;
+      const num = Number(str);
+      if (!isNaN(num)) {
+        this.val = num;
+        if (this.callback) this.callback(this.val);
+        updateCurve();
+      }
+    });
+
+    // Textbox blur validation
+    this.valBox.addEventListener("blur", () => {
+      const val = this.valBox.value.trim();
+      const num = Number(val);
+      const validDecimalRegex = /^[-+]?\d*\.?\d+$/;
+      if (val === '' || isNaN(num) || !validDecimalRegex.test(val)) {
+        alert('Please enter a valid decimal number.');
+        this.valBox.value = formatSigFig(this.val, 3);
+        this.valBox.focus();
+      } else {
+        this.val = num;
+        this.valBox.value = formatSigFig(this.val, 3);
+        if (this.callback) this.callback(this.val);
+        updateCurve();
+      }
+    });
+  }
+
+  setCallback = (callback) => {
+    this.callback = callback;
+  }
+
+  attachParent = (parent) => {
+    parent.appendChild(this.div);
+  }
+}
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *           General Positioning
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+
+function setPanelPosition(guiObject, side = "left", offsetTop = 20, pad = 20) {
+  if (!guiObject || !guiObject.prototype || !guiObject.prototype._panel) return;
+
+  const panel = guiObject.prototype._panel;
+  panel.style.position = "fixed";
+  panel.style.top = offsetTop + "px";
+
+  if (side === "left") {
+    panel.style.left = pad + "px";
+    panel.style.right = "auto";
+  } else if (side === "right") {
+    panel.style.right = pad + "px";
+    panel.style.left = "auto";
+  }
+}
+
+
+// ----------------------------
+// Compute panel width even if hidden
+// ----------------------------
+function getPanelWidth(guiObject) {
+  const panel = guiObject?.prototype?._panel;
+  if (!panel) return 0;
+
+  let wasHidden = false;
+  if (panel.style.display === "none") {
+    wasHidden = true;
+    panel.style.display = "block"; // temporarily show
+  }
+
+  const width = panel.getBoundingClientRect().width;
+
+  if (wasHidden) panel.style.display = "none"; // restore
+  return width;
+}
+
+// ----------------------------
+// Dynamic Canvas Size Calculation
+// ----------------------------
+function computeCanvasSize() {
+  const PAD_SIDE = 20; // spacing between canvas and panels
+
+  // Dynamically calculate left and right widths
+  const leftWidth = getPanelWidth(productGui) + PAD_SIDE;
+  const rightWidth = getPanelWidth(gui) + PAD_SIDE;
+
+  // Available width for the canvas
+  let availableWidth = Math.max(300, window.innerWidth - leftWidth - rightWidth - PAD_SIDE);
+
+  const maxHeight = Math.min(canvasHeightMax || 500, window.innerHeight - 40); // 40px total top/bottom padding
+  const aspect = 4 / 3; // width/height aspect ratio
+
+  let w = availableWidth;
+  let h = w / aspect;
+
+  // Respect maximum height
+  if (h > maxHeight) {
+    h = maxHeight;
+    w = h * aspect;
+  }
+
+  return { width: w, height: h };
+}
+
+
+// ----------------------------
+// Panel positioning
+// ----------------------------
+function initPanelPositions() {
+  const PAD_SIDE = 20;
+  const topY = PAD_SIDE;
+
+  // Right-side panels
+  if (gui) setPanelPosition(gui, "right", topY, PAD_SIDE);
+  if (gui2) setPanelPosition(gui2, "right", topY + secondaryGuiTopOffset, PAD_SIDE);
+
+  // Left-side panels
+  if (productGui) setPanelPosition(productGui, "left", topY, PAD_SIDE);
+  if (wtGui) setPanelPosition(wtGui, "left", topY + productPanelHeight + PAD_SIDE, PAD_SIDE);
+
+  // Half-life embedded text (textGui) below plot
+  if (textGui && textGui.updateHalfLifeText) {
+    const wrapper = document.getElementById('plot-wrapper');
+    if (wrapper) {
+      const rect = wrapper.getBoundingClientRect();
+      setPanelPosition(textGui, "left", rect.bottom, PAD_SIDE);
+    }
+  }
+}
+
+// ----------------------------
+// Window resize handler
+// ----------------------------
 function windowResized() {
-  clientWidth = Math.max(600, window.innerWidth - canvasWidthMargin);
-  clientHeight = window.innerHeight - 200;
+  const size = computeCanvasSize();
 
-  // Enforce a 4/3 Aspect Ratio
-  const asp = 4 / 3;
-  clientHeight = Math.min(clientHeight, clientWidth / asp - 200);
-  clientWidth = clientHeight * asp;
+  if (typeof resizeCanvas === 'function') {
+    resizeCanvas(size.width, size.height);
+  }
 
-  resizeCanvas(clientWidth, clientHeight);
-  attPlot.GPLOT.setOuterDim(clientWidth, clientHeight);
-  attPlot.GPLOT.setPos(0, 0);
+  clientWidth = size.width;
+  clientHeight = size.height;
 
-  const base = document.getElementById("plot-wrapper").getBoundingClientRect();
-  const right = base.right + PAD;
-  const left = base.left - PAD;
-  const top = PAD;
+  // Update plot dimensions if already initialized
+  if (attPlot && attPlot.GPLOT) {
+    attPlot.GPLOT.setOuterDim(size.width, size.height);
+    attPlot.GPLOT.setPos(0, 0);
+  }
 
-  gui.prototype.setPosition(right, top);
-  gui2.prototype.setPosition(right, secondaryGuiTopOffset + top);
-
-  setPanelPosition(textGui, left+80, base.bottom);
-  setPanelPosition(productGui, left - productPanelWidth, top);
-  setPanelPosition(wtGui, left - productPanelWidth, top + productPanelHeight + PAD);
+  initPanelPositions();
+  loop(); // redraw everything
 }
 
 
 
-function setup() {
-  const cnv = createCanvas(clientWidth, clientHeight);
-  cnv.parent(document.getElementById("plot-wrapper"))
 
-  initPlot();
-  initMainGUI();
-  initSecondaryGUI();
-  initHalfLifeGUI();
-  initProductGUI();
-  initWtToMMGUI();
 
-  updateEquations();
-
-  AttenuationFunction = new Plot(equation, "x", 0, Depth);
-  AttenuationFunction.lineThickness = 0; //for reference tuning margins, else ==0 as needed for set-up
-  attPlot.addFuncs(AttenuationFunction);
-  windowResized();
-  togglePanels(true);
-  togglePanels2(true);
-
-  // Event listener for button
-  document.getElementById("calc-btn").addEventListener("click", () => {
-    panelsAreHidden = !panelsAreHidden;
-    togglePanels(panelsAreHidden);
-  });
-
-  // Event listener for half-life button
-  document.getElementById("half-btn").addEventListener("click", () => {
-    panelsAreHidden2 = !panelsAreHidden2;
-    togglePanels2(panelsAreHidden2);
-  });
-}
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *           Graph + Set-up
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
 
 function initPlot() {
   attPlot = new PlotCanvas(this);
   attPlot.plotSetup();
 
-  // Set explicit base margins (you can adjust these values)
-  //attPlot.GPLOT.mar = [60, 60, 50, 50]; // left, right, top, bottom
-
   attPlot.GPLOT.getXAxis().getAxisLabel().setText("Depth (\u03BCm)");
-  attPlot.GPLOT.getYAxis().getAxisLabel().setText("Intensity (mW/cm\u00B2)");
-  attPlot.GPLOT.getTitle().setText("Attenuation due to one absorber");
+  attPlot.GPLOT.getYAxis().getAxisLabel().setText("Intensity (mW/cm²)");
+  attPlot.GPLOT.getTitle().setText("Attenuation due to one absorber (monochromatic source)");
 
   attPlot.GPLOT.getXAxis().getAxisLabel().setFontSize(16);
   attPlot.GPLOT.getYAxis().getAxisLabel().setFontSize(16);
-
   attPlot.GPLOT.getXAxis().setFontSize(16);
   attPlot.GPLOT.getYAxis().setFontSize(16);
-
   attPlot.GPLOT.getTitle().setFontSize(16);
-
   attPlot.GPLOT.setFontSize(16);
 }
 
+function setup() {
+  const wrapper = document.getElementById('plot-wrapper');
+
+  // Temporary canvas
+  const cnv = createCanvas(100, 100); 
+  cnv.parent(wrapper);
+
+  // Initialize plot
+  initPlot();
+
+  // Initialize GUIs
+  initMainGUI();
+  initSecondaryGUI();
+  initProductGUI();
+  initWtToMMGUI();
+
+  // Prepare attenuation function
+  updateEquations();
+  AttenuationFunction = new Plot(equation, "x", 0, Depth);
+  AttenuationFunction.lineThickness = 0;
+  attPlot.addFuncs(AttenuationFunction);
+
+  draw();
+  noLoop();
+
+  // Resize canvas correctly now that all panels exist
+  windowResized();
+
+  // Hide optional panels after positioning
+  toggleProductPanels(true);
+  toggleSecondaryPanel(true);
+
+   // Event listener for button
+  document.getElementById("calc-btn").addEventListener("click", () => {
+    panelsAreHidden = !panelsAreHidden;
+    toggleProductPanels(panelsAreHidden);
+  });
+
+  // Event listener for half-life button
+  document.getElementById("half-btn").addEventListener("click", () => {
+    panelsAreHidden2 = !panelsAreHidden2;
+    toggleSecondaryPanel(panelsAreHidden2);
+  });
+}
+
+function draw() {
+  clear();
+
+  // Update equations and attenuation function
+  updateEquations();
+  AttenuationFunction.update(equation, Depth);
+
+  // Set dynamic plot limits
+  attPlot.GPLOT.setXLim(0, Depth);
+  attPlot.GPLOT.setYLim(0, Intensity);
+
+  // Ensure numeric tick labels are drawn
+  attPlot.GPLOT.getXAxis().setDrawTickLabels(true);
+  attPlot.GPLOT.getYAxis().setDrawTickLabels(true);
+
+  // Draw the base plot (axes, grid)
+  attPlot.plotDraw();
+
+  const mar = attPlot.GPLOT.mar;
+  const marginLeft = mar[0] + 10;
+  const marginTop = mar[2];
+  const marginRight = mar[1] - 40;
+  const marginBottom = mar[3] + 30;
+
+  const plotWidth = attPlot.GPLOT.outerDim[0] - marginLeft - marginRight;
+  const plotHeight = attPlot.GPLOT.outerDim[1] - marginTop - marginBottom;
+
+  // Draw attenuation curve
+  stroke(0, 100, 255);
+  strokeWeight(3);
+  noFill();
+  beginShape();
+  for (let px = 0; px <= plotWidth; px++) {
+    let xVal = (px / plotWidth) * Depth;
+    let yVal = attenuationAt(xVal); // uses current Conc & Absorb
+    let py = marginTop + plotHeight - (yVal / Intensity) * plotHeight;
+    vertex(marginLeft + px, py);
+  }
+  endShape();
+
+  // Recalculate vertical reference lines dynamically
+  const A10 = -1e7 / (Absorb * Conc) * Math.log(0.9);
+  const A20 = -1e7 / (Absorb * Conc) * Math.log(0.8);
+  const Ae  = -1e7 / (Absorb * Conc) * Math.log(0.367879);
+
+  const depths = [
+  { depth: A10, color: [255, 100, 100], label: "90%" },
+  { depth: A20, color: [255, 180, 50], label: "80%" },
+  { depth: Ae,  color: [128, 0, 128], label: "1/e (Dₚ)" }
+];
+
+depths.forEach(d => {
+  const pxLine = marginLeft + (d.depth / Depth) * plotWidth;
+  if (pxLine > marginLeft + plotWidth || pxLine < marginLeft) return;
+
+  // Draw vertical line
+  stroke(...d.color, 150);
+  strokeWeight(1.5);
+  line(pxLine, marginTop, pxLine, marginTop + plotHeight);
+
+  // Draw glowing label
+  const labelX = pxLine + 4;
+  const labelY = marginTop + plotHeight - 2;
+
+  textSize(16);       // larger font
+  textAlign(LEFT, BOTTOM);
+
+  // Solid label on top
+  noStroke();
+  fill(...d.color);
+  text(d.label, labelX, labelY);
+});
+
+
+  // Draw moving cursor line if mouse is over plot
+  if (snapX !== null && snapY !== null) {
+    const px = marginLeft + (snapX / Depth) * plotWidth;
+    const py = marginTop + plotHeight - (snapY / Intensity) * plotHeight;
+
+    stroke(100, 180, 255);
+    fill(100, 180, 255, 180);
+    ellipse(px, py, 12, 12);
+
+    noStroke();
+    fill(0);
+    textSize(14);
+    textAlign(LEFT, CENTER);
+    text(`Depth: ${snapX.toPrecision(3)} µm`, px + 10, py - 20);
+    text(`Intensity: ${snapY.toPrecision(3)} mW/cm²`, px + 10, py);
+  }
+
+  // Update half-lives
+  const es_sec = Math.log(2) / (1000 * QY * Absorb * (Intensity / (119624 / Wavelength) / 1e6));
+  const md_sec = Math.log(2) / (1000 * QY * Absorb * (Intensity * Math.exp(-Absorb * Conc * Depth / 1e7) / (119624 / Wavelength) / 1e6));
+
+  ESh = formatTimeWithSigFig(es_sec, 3);
+  MDh = formatTimeWithSigFig(md_sec, 3);
+  updateHalfLifeText();
+}
+
+function mouseMoved() {
+  if (!attPlot || !AttenuationFunction) return;
+
+  const mar = attPlot.GPLOT.mar;
+  const marginLeft = mar[0] + 10;
+  const marginRight = mar[1] - 40;
+  const marginTop = mar[2];
+  const marginBottom = mar[3] + 30;
+
+  if (mouseX < 0 || mouseX > clientWidth || mouseY < 0 || mouseY > clientHeight) {
+    snapX = null;
+    snapY = null;
+    loop();
+    return;
+  }
+
+  const plotWidth = clientWidth - marginLeft - marginRight;
+  const mouseXVal = (mouseX - marginLeft) / plotWidth * Depth;
+  snapX = Math.min(Math.max(mouseXVal, 0), Depth);
+  snapY = attenuationAt(snapX);
+
+  loop(); // only redraw cursor
+}
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *           GUIs
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+
 
 function initMainGUI() {
-  gui = createGui('Plot controls', clientWidth, attPlot.GPLOT.mar[2]);
+  gui = createGui('Plot controls', 100, 100); // size will auto-adjust
   const parent = gui.prototype._panel;
 
   const sliders = [
@@ -385,41 +550,76 @@ function initMainGUI() {
   ];
 
   const callbacks = [
-    (val) => Conc = val,
-    (val) => Absorb = val,
-    (val) => Intensity = val,
-    (val) => Depth = val
+    val => Conc = val,
+    val => Absorb = val,
+    val => Intensity = val,
+    val => Depth = val
   ];
 
   sliders.forEach((slider, i) => {
     slider.attachParent(parent);
     slider.setCallback(callbacks[i]);
   });
-  
-  setPanelPosition(gui, window.innerWidth - gui.prototype._panel.offsetWidth - PAD, attPlot.GPLOT.mar[2]);
+
+  // Initial position: right side
+  const PAD_SIDE = 10;
+  const rightX = window.innerWidth - gui.prototype._panel.offsetWidth - PAD_SIDE;
+  setPanelPosition(gui, rightX, attPlot.GPLOT.mar[2]);
 }
 
 function initSecondaryGUI() {
-  gui2 = createGui('Additional variables for half-life', clientWidth, secondaryGuiTopOffset + attPlot.GPLOT.mar[2]);
+  gui2 = createGui('Additional variables for half-life', 100, 100);
   const gui2parent = gui2.prototype._panel;
 
-  const laSlider = new ProductSlider('Wavelength', 200, 600, Wavelength, 0.1, 'Wavelength', 'nm');
-  laSlider.attachParent(gui2parent);
-  laSlider.setCallback((val) => Wavelength = val);
+  // --- Sliders ---
+  const sliders = [
+    new ProductSlider('Wavelength', 200, 600, Wavelength, 0.1, 'Wavelength', 'nm'),
+    new ProductSlider('QY', 0, 1, QY, 0.001, 'Quantum yield', '')
+  ];
 
-  const qySlider = new ProductSlider('QY', 0, 1, QY, 0.001, 'Quantum yield', '');
-  qySlider.attachParent(gui2parent);
-  qySlider.setCallback((val) => QY = val);
-}
+  sliders.forEach((slider, i) => {
+    slider.attachParent(gui2parent);
+    if (i === 0) slider.setCallback(val => Wavelength = val);
+    else slider.setCallback(val => QY = val);
+  });
 
-function initHalfLifeGUI() {
-  textGui = createGui('Initiator half-life', resultsPanelLeft, resultsPanelTopOffset+10000);
-  textGui.prototype._panel.className = "qs_main text-gui";
-  initHalfLifeText(textGui.prototype._panel);
+  // --- Half-life display inside secondary GUI ---
+  const hlDiv = document.createElement("div");
+  hlDiv.id = `hl-container`;
+  hlDiv.className = "qs_container";
+  hlDiv.style.marginTop = "10px"; // spacing from sliders
+  gui2parent.appendChild(hlDiv);
+
+  // Use global hlLabel (do NOT redeclare with const)
+  hlLabel.id = `hl-label`;
+  hlLabel.className = "qs_label";
+  hlDiv.appendChild(hlLabel);
+
+  // Function to update half-life text
+  function updateHalfLifeTextEmbedded() {
+    hlLabel.innerHTML = `
+      <p>
+        @ exposed surface: ${ESh}<br>
+        @ maximum depth: ${MDh}
+      </p>
+    `;
+  }
+
+  // Store reference globally so draw() can update
+  textGui = { updateHalfLifeText: updateHalfLifeTextEmbedded };
+
+  // Initial update so text appears immediately
+  updateHalfLifeTextEmbedded();
+
+  // --- Position GUI ---
+  const PAD_SIDE = 10;
+  const rightX = window.innerWidth - gui2.prototype._panel.offsetWidth - PAD_SIDE;
+  const topY = secondaryGuiTopOffset + attPlot.GPLOT.mar[2];
+  setPanelPosition(gui2, rightX, topY);
 }
 
 function initProductGUI() {
-  productGui = createGui('Napierian absorptivity', productPanelLeftMargin, productPanelTopOffset);
+  productGui = createGui('Napierian absorptivity', 100, 100);
   const parent = productGui.prototype._panel;
 
   const sliders = [
@@ -458,11 +658,14 @@ function initProductGUI() {
   sliders[2].setCallback(val => { productThickness = val; updateProductValue(); });
 
   updateProductValue();
+
+  // Position on left with padding
+  const PAD_SIDE = 10;
+  setPanelPosition(productGui, PAD_SIDE, PAD_SIDE);
 }
 
 function initWtToMMGUI() {
-  const newGuiLeft = productPanelLeftMargin + productPanelWidth + panelHorizontalSpacing;
-  wtGui = createGui('wt% to mM conversion', newGuiLeft, productPanelTopOffset);
+  wtGui = createGui('wt% to mM conversion', 100, 100);
   const parent = wtGui.prototype._panel;
 
   let concNew = 0.1, dNew = 0.786, MWNew = 348.37;
@@ -502,144 +705,26 @@ function initWtToMMGUI() {
   sliders[2].setCallback(val => { MWNew = val; updateConcentration(); });
 
   updateConcentration();
+
+  // Position below productGui
+  const PAD_SIDE = 10;
+  const topY = PAD_SIDE + productPanelHeight + panelVerticalSpacing;
+  setPanelPosition(wtGui, PAD_SIDE, topY);
 }
 
-function mouseMoved() {
-  if (!attPlot || !AttenuationFunction) return;
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *           Minor functions
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
 
-  const mar = attPlot.GPLOT.mar;
-  const marginLeft = mar[0] + 10;
-  const marginRight = mar[1] - 40;
-  const marginTop = mar[2];
-  const marginBottom = mar[3] + 30;
-
-  if (mouseX < 0 || mouseX > clientWidth || mouseY < 0 || mouseY > clientHeight) {
-    snapX = null;
-    snapY = null;
-    loop();
-    return;
-  }
-
-  const dataXMin = 0;
-  const dataXMax = Depth;
-  const plotWidth = clientWidth - marginLeft - marginRight;
-  const mouseXVal = dataXMin + ((mouseX - marginLeft) / plotWidth) * (dataXMax - dataXMin);
-
-  snapX = Math.min(Math.max(mouseXVal, dataXMin), dataXMax);
-  snapY = attenuationAt(snapX);
-
-  loop();
-}
-
-function draw() {
-  clear();
-
-  updateEquations();
-  AttenuationFunction.update(equation, Depth);
-
-  // Set plot limits dynamically
-  attPlot.GPLOT.setXLim(0, Depth);
-  attPlot.GPLOT.setYLim(0, Intensity);
-
-  // Enable numeric tick labels
-  attPlot.GPLOT.getXAxis().setDrawTickLabels(true);
-  attPlot.GPLOT.getYAxis().setDrawTickLabels(true);
-
-  // Draw base plot
-  attPlot.plotDraw();
-
-  const mar = attPlot.GPLOT.mar;
-  const marginLeft = mar[0] + 10;
-  const marginRight = mar[1] - 40;
-  const marginTop = mar[2];
-  const marginBottom = mar[3] + 30;
-
-  const plotWidth = attPlot.GPLOT.outerDim[0] - marginLeft - marginRight;
-  const plotHeight = attPlot.GPLOT.outerDim[1] - marginTop - marginBottom;
-
-  // Draw attenuation curve
-  stroke(0, 100, 255);
-  strokeWeight(3);
-  noFill();
-  beginShape();
-  for (let px = 0; px <= plotWidth; px++) {
-    let xVal = (px / plotWidth) * Depth;
-    let yVal = Intensity * Math.exp(-Absorb * Conc * xVal / 1e7);
-    let py = marginTop + plotHeight - (yVal / Intensity) * plotHeight;
-    vertex(marginLeft + px, py);
-  }
-  endShape();
-
-  // Fixed attenuation depths
-  const A10 = -1e7 / (Absorb * Conc) * Math.log(0.9);
-  const A20 = -1e7 / (Absorb * Conc) * Math.log(0.8);
-  const Ae = -1e7 / (Absorb * Conc) * Math.log(0.367879);
-
-  const depths = [
-    { depth: A10, color: [255, 100, 100], label: "90%" },
-    { depth: A20, color: [255, 180, 50], label: "80%" },
-    { depth: Ae, color: [128, 0, 128], label: "Dₚ" } // proper subscript
-  ];
-
-  // Draw fixed attenuation lines, disappear if past right edge
-  depths.forEach(d => {
-    const pxLine = marginLeft + (d.depth / Depth) * plotWidth;
-    if (pxLine > marginLeft + plotWidth) return; // completely skip drawing if beyond plot
-
-    const pyTop = marginTop;
-    const pyBottom = marginTop + plotHeight;
-
-    stroke(...d.color, 150);
-    strokeWeight(1.5);
-    line(pxLine, pyTop, pxLine, pyBottom);
-
-    // Label to the right of the line, just above x-axis
-    fill(0);
-    textSize(12);
-    textAlign(LEFT, BOTTOM);
-    text(d.label, pxLine + 4, pyBottom - 2);
-  });
-
-  // Draw hovered point if mouse over plot
-  if (snapX !== null && snapY !== null) {
-    const px = marginLeft + (snapX / Depth) * plotWidth;
-    const py = marginTop + plotHeight - (snapY / Intensity) * plotHeight;
-
-    stroke(100, 180, 255);
-    fill(100, 180, 255, 180);
-    ellipse(px, py, 12, 12);
-
-    noStroke();
-    fill(0);
-    textSize(14);
-    textAlign(LEFT, CENTER);
-    text(`Depth: ${snapX.toPrecision(3)} µm`, px + 10, py - 20);
-    text(`Intensity: ${snapY.toPrecision(3)} mW/cm²`, px + 10, py);
-  }
-
-  // Update half-lives
-  const es_sec = Math.log(2) / (1000 * QY * Absorb * (Intensity / (119624 / Wavelength) / 1e6));
-  const md_sec = Math.log(2) / (1000 * QY * Absorb * (Intensity * Math.exp(-Absorb * Conc * Depth / 1e7) / (119624 / Wavelength) / 1e6));
-
-  ESh = formatTimeWithSigFig(es_sec, 3);
-  MDh = formatTimeWithSigFig(md_sec, 3);
-  updateHalfLifeText();
-
-  noLoop();
-}
-
-
-
-
-
-
-// Hamburger menu
+// Toggle hamburger menu
 function toggleMenu() {
   const menu = document.getElementById('menu');
   menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
 }
 
-// click outside to close
+// Click outside to close
 document.addEventListener('click', e => {
   const menu = document.getElementById('menu');
   const btn = document.querySelector('.menu-button');
@@ -648,9 +733,69 @@ document.addEventListener('click', e => {
   }
 });
 
-// show/hide panels
-function togglePanels(hidden) {
-  // Get the panels
+// Format number with up to 'sig' significant digits but never use scientific notation
+function formatSigFig(num, sig = 3) {
+  if (num === null || typeof num === 'undefined' || isNaN(Number(num))) return '';
+
+  num = Number(num);
+
+  // Handle zero separately
+  if (num === 0) return '0';
+
+  // Calculate order of magnitude (base 10 exponent)
+  const order = Math.floor(Math.log10(Math.abs(num)));
+
+  // If order >= sig - 1, show as integer with no decimals
+  if (order >= sig - 1) {
+    return num.toFixed(0);
+  }
+
+  // Else calculate decimals to keep 'sig' significant digits
+  const decimals = sig - 1 - order;
+
+  // Use toFixed with decimals, then trim trailing zeros
+  let str = num.toFixed(decimals);
+
+  // Remove trailing zeros and optional decimal point
+  str = str.replace(/\.?0+$/, '');
+
+  return str;
+}
+
+function formatTimeWithSigFig(seconds, sig = 3) {
+  if (seconds <= 0 || isNaN(seconds)) return "0 s";
+
+  const daySec = 86400;
+  const hourSec = 3600;
+  const minSec = 60;
+
+  let value, unit;
+
+  if (seconds >= daySec) {
+    value = seconds / daySec;
+    unit = "days";
+  } else if (seconds >= hourSec) {
+    value = seconds / hourSec;
+    unit = "h";
+  } else if (seconds >= minSec) {
+    value = seconds / minSec;
+    unit = "min";
+  } else {
+    value = seconds;
+    unit = "s";
+  }
+
+  // Format value to sig figs without scientific notation
+  let formatted = Number.parseFloat(value).toPrecision(sig);
+  
+  // Remove trailing zeros and possible decimal point if integer
+  formatted = formatted.replace(/\.?0+$/, '');
+
+  return `${formatted} ${unit}`;
+}
+
+// Toggle productGui and wtGui visibility
+function toggleProductPanels(hidden) {
   const pPanel = productGui.prototype._panel;
   const wPanel = wtGui.prototype._panel;
 
@@ -662,18 +807,15 @@ function togglePanels(hidden) {
     wPanel.style.display = '';
   }
 }
-
-// show/hide panels
-function togglePanels2(hidden) {
-  // Get the panels
-  const pPanel = gui2.prototype._panel;
-  const wPanel = textGui.prototype._panel;
+// Show/hide secondary GUI (half-life)
+function toggleSecondaryPanel(hidden) {
+  const sPanel = gui2.prototype._panel;
 
   if (hidden) {
-    pPanel.style.display = 'none';
-    wPanel.style.display = 'none';
+    sPanel.style.display = 'none';
   } else {
-    pPanel.style.display = '';
-    wPanel.style.display = '';
+    sPanel.style.display = '';
   }
 }
+
+
