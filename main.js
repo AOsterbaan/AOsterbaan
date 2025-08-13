@@ -274,14 +274,7 @@ function initHalfLifeText(parent) {
 
 function updateHalfLifeText() {
   hlLabel.innerHTML = `
-
 <p>
-  At what depth are you optically thin?<br>
-  <b>10% attenuation:</b> ${A10} µm<br>
-  <b>20% attenuation:</b> ${A20} µm
-</p>
-<p>
-  <b>Initiator half-life</b> (assuming no diffusion, bleaching, or darkening):<br>
   @ exposed surface: ${ESh}<br>
   @ maximum depth: ${MDh} 
 </p>
@@ -420,7 +413,7 @@ function initSecondaryGUI() {
 }
 
 function initHalfLifeGUI() {
-  textGui = createGui('Results', resultsPanelLeft, resultsPanelTopOffset+10000);
+  textGui = createGui('Initiator half-life', resultsPanelLeft, resultsPanelTopOffset+10000);
   textGui.prototype._panel.className = "qs_main text-gui";
   initHalfLifeText(textGui.prototype._panel);
 }
@@ -542,14 +535,13 @@ function draw() {
   clear();
 
   updateEquations();
-
   AttenuationFunction.update(equation, Depth);
 
   // Set plot limits dynamically
   attPlot.GPLOT.setXLim(0, Depth);
   attPlot.GPLOT.setYLim(0, Intensity);
 
-  // Enable default numeric tick labels (remove any disabling)
+  // Enable numeric tick labels
   attPlot.GPLOT.getXAxis().setDrawTickLabels(true);
   attPlot.GPLOT.getYAxis().setDrawTickLabels(true);
 
@@ -557,15 +549,15 @@ function draw() {
   attPlot.plotDraw();
 
   const mar = attPlot.GPLOT.mar;
-  const marginLeft = mar[0]+10;
-  const marginRight = mar[1]-40;
+  const marginLeft = mar[0] + 10;
+  const marginRight = mar[1] - 40;
   const marginTop = mar[2];
-  const marginBottom = mar[3]+30;
+  const marginBottom = mar[3] + 30;
 
   const plotWidth = attPlot.GPLOT.outerDim[0] - marginLeft - marginRight;
   const plotHeight = attPlot.GPLOT.outerDim[1] - marginTop - marginBottom;
 
-  // Draw attenuation curve in blue with thicker stroke
+  // Draw attenuation curve in blue
   stroke(0, 100, 255);
   strokeWeight(3);
   noFill();
@@ -578,7 +570,34 @@ function draw() {
   }
   endShape();
 
-  // Draw hovered point circle and info if mouse is over plot
+  // Fixed attenuation depths
+  const A10 = -1e7 / (Absorb * Conc) * Math.log(0.9);
+  const A20 = -1e7 / (Absorb * Conc) * Math.log(0.8);
+
+  const depths = [
+    { depth: A10, color: [255, 100, 100], label: "90%" },
+    { depth: A20, color: [255, 180, 50], label: "80%" }
+  ];
+
+  // Draw fixed attenuation lines with labels to the right, just above x-axis
+  depths.forEach(d => {
+    let pxLine = marginLeft + (d.depth / Depth) * plotWidth;
+    let pyTop = marginTop;
+    let pyBottom = marginTop + plotHeight;
+
+    // Thin, semi-transparent vertical line
+    stroke(...d.color, 150);
+    strokeWeight(1.5);
+    line(pxLine, pyTop, pxLine, pyBottom);
+
+    // Label to the right of the line, just above x-axis
+    fill(0);
+    textSize(12);
+    textAlign(LEFT, BOTTOM);
+    text(d.label, pxLine + 4, pyBottom - 2);
+  });
+
+  // Draw hovered point if mouse over plot
   if (snapX !== null && snapY !== null) {
     const px = marginLeft + (snapX / Depth) * plotWidth;
     const py = marginTop + plotHeight - (snapY / Intensity) * plotHeight;
@@ -591,24 +610,23 @@ function draw() {
     fill(0);
     textSize(14);
     textAlign(LEFT, CENTER);
-    text(`Depth: ${snapX.toPrecision(3)} \u03BCm`, px + 10, py - 20);
-    text(`Intensity: ${snapY.toPrecision(3)} mW/cm\u00B2`, px + 10, py);
+    text(`Depth: ${snapX.toPrecision(3)} µm`, px + 10, py - 20);
+    text(`Intensity: ${snapY.toPrecision(3)} mW/cm²`, px + 10, py);
   }
 
-  // Update attenuation depths and half-lives
-  A10 = Math.round(-1 * 1e7 / (Absorb * Conc) * Math.log(0.9));
-  A20 = Math.round(-1 * 1e7 / (Absorb * Conc) * Math.log(0.8));
-
+  // Update half-lives
   const es_sec = Math.log(2) / (1000 * QY * Absorb * (Intensity / (119624 / Wavelength) / 1e6));
-  const md_sec = Math.log(2) / (1000 * QY * Absorb * (Intensity * Math.exp(-1 * Absorb * Conc * Depth / 1e7) / (119624 / Wavelength) / 1e6));
+  const md_sec = Math.log(2) / (1000 * QY * Absorb * (Intensity * Math.exp(-Absorb * Conc * Depth / 1e7) / (119624 / Wavelength) / 1e6));
 
   ESh = formatTimeWithSigFig(es_sec, 3);
   MDh = formatTimeWithSigFig(md_sec, 3);
-
   updateHalfLifeText();
 
   noLoop();
 }
+
+
+
 
 // Hamburger menu
 function toggleMenu() {
