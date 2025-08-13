@@ -1,10 +1,6 @@
 @charset "UTF-8";
 /* CSS Document */
 
-html, body {
-  height: 100%;
-}
-
 body {
   margin: 0;
   display: flex;
@@ -22,3 +18,95 @@ body {
   width: max-content !important;
 }
 
+.btn-sm {
+  border-radius: 3px;
+  border: .5px solid black;
+  padding: 0px;
+  padding-left: .5em;
+  padding-right: .5em;
+}
+
+.btn-wide {
+  width: 100%;
+}
+
+#plot-wrapper {
+  display: grid;
+  margin: auto;
+  position: relative;
+  height: min-content;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Hamburger menu
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.hamburger-container {
+  position: relative;
+  /* was: absolute */
+  top: auto;
+  /* reset position */
+  right: auto;
+  align-self: flex-end;
+  /* aligns it to the right in flex container */
+  margin-top: -1rem;
+  /* spacing from the row above */
+  margin-right: -0.5rem;
+  margin-left: auto;
+  /* Push to far right */
+  align-self: center;
+}
+
+.menu-button {
+  position:absolute;
+  right: 1.5em;
+  top: 3em;
+
+  font-size: 1.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transform: translate(-5px, -30px);
+  background-color: lightblue;
+  height: max-content;
+  width: max-content;
+  margin-top: 0;
+  border-radius: 3px;
+  border: 1px solid black;
+
+  align-items: center;
+  text-align: start;
+}
+
+.menu-button:hover {
+  background-color: rgb(198, 224, 233);
+}
+
+.menu-button>div {
+  transform: translateY(-5px);
+}
+
+.menu-content {
+  display: none;
+  position: absolute;
+  top: 2rem;
+  right: 0;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  z-index: 500;
+  /* keep this lower than modal's z-index */
+}
+
+.menu-content a {
+  display: block;
+  padding: 0.5rem 1rem;
+  color: #111827;
+  text-decoration: none;
+  font-size: 1.05rem;
+}
+
+.menu-content a:hover {
+  background: #f0f0f0;
+}
