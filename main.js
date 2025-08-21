@@ -24,7 +24,7 @@ const mainGuiLeft = 0;
 const mainGuiWidth = clientWidth;  // dynamic width of main GUI panel
 
 const secondaryGuiTopOffset = 323;  // vertical offset for secondary GUI (gui2)
-const InertGuiOffset = 243;
+const InertGuiOffset = 228;
 const secondaryGuiLeft = 0;
 const secondaryGuiWidth = clientWidth; // same width as main GUI by default
 
