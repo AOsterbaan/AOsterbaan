@@ -376,8 +376,8 @@ function initPlot() {
 function setup() {
   const wrapper = document.getElementById('plot-wrapper');
 
-  // Temporary canvas
-  const cnv = createCanvas(100, 100); 
+  // Create canvas at wrapper size
+  const cnv = createCanvas(wrapper.clientWidth, wrapper.clientHeight);
   cnv.parent(wrapper);
 
   // Initialize plot
@@ -395,28 +395,39 @@ function setup() {
   AttenuationFunction.lineThickness = 0;
   attPlot.addFuncs(AttenuationFunction);
 
+  // Initial draw and pause loop
   draw();
   noLoop();
 
-  // Resize canvas correctly now that all panels exist
-  windowResized();
+  // ----------------------------
+  // Delay resizing to ensure GPLOT fully initialized
+  // ----------------------------
+  setTimeout(() => {
+    windowResized();   // adjust canvas + GPLOT dimensions
+    loop();            // redraw after resizing
+    noLoop();          // stop continuous looping again
+  }, 50); // 50ms delay works well on GitHub Pages
 
+  // ----------------------------
   // Hide optional panels after positioning
+  // ----------------------------
   toggleProductPanels(true);
   toggleSecondaryPanel(true);
 
-   // Event listener for button
+  // ----------------------------
+  // Event listeners for buttons
+  // ----------------------------
   document.getElementById("calc-btn").addEventListener("click", () => {
     panelsAreHidden = !panelsAreHidden;
     toggleProductPanels(panelsAreHidden);
   });
 
-  // Event listener for half-life button
   document.getElementById("half-btn").addEventListener("click", () => {
     panelsAreHidden2 = !panelsAreHidden2;
     toggleSecondaryPanel(panelsAreHidden2);
   });
 }
+
 
 function draw() {
   clear();
