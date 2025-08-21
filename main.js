@@ -9,6 +9,7 @@
 const PAD = 20;
 var panelsAreHidden = true;
 var panelsAreHidden2 = true;
+var panelsAreHidden3 = true;
 
 const canvasHeight = 500;
 const canvasHeightMax = 800;  // Max height in pixels (adjust as needed)
@@ -22,7 +23,8 @@ const mainGuiTop = 0;
 const mainGuiLeft = 0;
 const mainGuiWidth = clientWidth;  // dynamic width of main GUI panel
 
-const secondaryGuiTopOffset = 320;  // vertical offset for secondary GUI (gui2)
+const secondaryGuiTopOffset = 323;  // vertical offset for secondary GUI (gui2)
+const InertGuiOffset = 243;
 const secondaryGuiLeft = 0;
 const secondaryGuiWidth = clientWidth; // same width as main GUI by default
 
@@ -32,7 +34,7 @@ const resultsPanelTopOffset = canvasHeight + 10; // just below canvas
 
 // PRODUCT PANEL layout variables
 const productPanelLeftMargin = 10;      
-const productPanelTopOffset = resultsPanelTopOffset + 100;  // below results panel with spacing
+const productPanelTopOffset = resultsPanelTopOffset + 105;  // below results panel with spacing
 const productPanelWidth = 200;          
 const productPanelHeight = 250;         
 
@@ -46,6 +48,7 @@ let gui2;
 let textGui;
 let productGui;
 let wtGui;
+let inertGui;
 
 // Variables for Calculations
 let Conc = 50;
@@ -54,6 +57,17 @@ let Intensity = 10;
 let Depth = 500;
 let Wavelength = 405;
 let QY = 0.55;
+
+// Inert Absorber
+// Starting values for inert absorber (not applied until GUI shown)
+const inertAbsorbStart = 50;  // Napierian absorptivity
+const inertConcStart = 490;   // Concentration (mM)
+let inertAbsorb = inertAbsorbStart;   // default Napierian absorptivity
+let inertConc = inertConcStart; // default concentration (mM)
+// Temporary storage for inert values when hidden
+let inertAbsorbSaved = inertAbsorbStart;
+let inertConcSaved = inertConcStart;
+let inertShown = false;
 
 // Graphing Function Prep
 let attPlot;
@@ -114,7 +128,9 @@ function updateHalfLifeText() {
 
 // Attenuation function
 function attenuationAt(x) {
-  return Intensity * Math.exp(-1 * Absorb * Conc / 1e7 * x);
+  // Combined absorptivity * concentration
+  const totalAbsConc = Absorb * Conc + inertAbsorb * inertConc;
+  return Intensity * Math.exp(-1 * totalAbsConc / 1e7 * x);
 }
 
 function updateEquations() {
@@ -294,9 +310,6 @@ function computeCanvasSize() {
   return { width: w, height: h };
 }
 
-
-
-
 // ----------------------------
 // Panel positioning
 // ----------------------------
@@ -311,9 +324,9 @@ function initPanelPositions() {
 
   if (gui) setPanelPosition(gui, "right", topY, PAD_SIDE);
   if (gui2) setPanelPosition(gui2, "right", topY + secondaryGuiTopOffset, PAD_SIDE);
+  if (inertGui) setPanelPosition(inertGui, "right", topY + secondaryGuiTopOffset + InertGuiOffset, PAD_SIDE);
   if (productGui) setPanelPosition(productGui, "left", topY, PAD_SIDE);
   if (wtGui) setPanelPosition(wtGui, "left", topY + productPanelHeight + PAD_SIDE, PAD_SIDE);
-
   if (textGui && textGui.updateHalfLifeText) {
     const wrapper = document.getElementById('plot-wrapper');
     if (wrapper) {
@@ -322,7 +335,6 @@ function initPanelPositions() {
     }
   }
 }
-
 
 // ----------------------------
 // Window resize handler
@@ -343,13 +355,10 @@ function windowResized() {
     attPlot.GPLOT.setPos(0, 0);
   }
 
+
   initPanelPositions();
   loop(); // redraw everything
 }
-
-
-
-
 
 /**
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -388,6 +397,7 @@ function setup() {
   initSecondaryGUI();
   initProductGUI();
   initWtToMMGUI();
+  initInertGUI();
 
   // Prepare attenuation function
   updateEquations();
@@ -413,6 +423,7 @@ function setup() {
   // ----------------------------
   toggleProductPanels(true);
   toggleSecondaryPanel(true);
+  toggleInertPanel(true);
 
   // ----------------------------
   // Event listeners for buttons
@@ -426,8 +437,12 @@ function setup() {
     panelsAreHidden2 = !panelsAreHidden2;
     toggleSecondaryPanel(panelsAreHidden2);
   });
-}
 
+    document.getElementById("inert-btn").addEventListener("click", () => {
+    panelsAreHidden3 = !panelsAreHidden3;
+    toggleInertPanel(panelsAreHidden3);
+  });
+}
 
 function draw() {
   clear();
@@ -533,16 +548,16 @@ function draw() {
     text(`Intensity: ${snapY.toPrecision(3)} mW/cm²`, px + 10, py);
   }
 
+  // Combined absorptivity * concentration
+  const totalAbsConc = Absorb * Conc + inertAbsorb * inertConc;
   // Update half-lives
   const es_sec = Math.log(2) / (1000 * QY * Absorb * (Intensity / (119624 / Wavelength) / 1e6));
-  const md_sec = Math.log(2) / (1000 * QY * Absorb * (Intensity * Math.exp(-Absorb * Conc * Depth / 1e7) / (119624 / Wavelength) / 1e6));
+  const md_sec = Math.log(2) / (1000 * QY * Absorb * (Intensity * Math.exp(-totalAbsConc * Depth / 1e7) / (119624 / Wavelength) / 1e6));
 
   ESh = formatTimeWithSigFig(es_sec, 3);
   MDh = formatTimeWithSigFig(md_sec, 3);
   updateHalfLifeText();
 }
-
-
 
 function mouseMoved() {
   if (!attPlot || !AttenuationFunction) return;
@@ -605,7 +620,7 @@ function initMainGUI() {
 }
 
 function initSecondaryGUI() {
-  gui2 = createGui('Additional variables for half-life', 100, 100);
+  gui2 = createGui('Initiator half-life', 100, 100);
   const gui2parent = gui2.prototype._panel;
 
   // --- Sliders ---
@@ -749,6 +764,45 @@ function initWtToMMGUI() {
   setPanelPosition(wtGui, PAD_SIDE, topY);
 }
 
+function initInertGUI() {
+  inertGui = createGui('Inert absorber', 100, 100);
+  const parent = inertGui.prototype._panel;
+
+  // Initialize sliders with starting values but do not apply yet
+  const sliders = [
+    new ProductSlider('inertAbsorb', 0, 5000, inertAbsorbStart, 0.1, 'Napierian absorptivity', 'L/mol-cm'),
+    new ProductSlider('inertConc', 0, 1000, inertConcStart, 0.1, 'Concentration', 'mM')
+  ];
+
+  sliders.forEach((slider, i) => {
+    slider.attachParent(parent);
+    slider.setCallback(val => {
+      if (inertShown) {
+        if (i === 0) inertAbsorb = val;
+        else inertConc = val;
+        updateCurve();
+      }
+    });
+  });
+
+  inertGui.sliders = sliders; // save reference for later updates
+
+// Position at bottom-right
+const topY = PAD + secondaryGuiTopOffset + InertGuiOffset;
+setPanelPosition(inertGui, "right", topY, PAD);
+
+// Initialize sliders with starting values
+if (inertGui.sliders) {
+  inertGui.sliders[0].val = inertAbsorb;
+  inertGui.sliders[0].sliderDiv.value = inertAbsorb;
+  inertGui.sliders[0].valBox.value = formatSigFig(inertAbsorb, 3);
+
+  inertGui.sliders[1].val = inertConc;
+  inertGui.sliders[1].sliderDiv.value = inertConc;
+  inertGui.sliders[1].valBox.value = formatSigFig(inertConc, 3);
+}
+}
+
 /**
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *           Minor functions
@@ -854,5 +908,47 @@ function toggleSecondaryPanel(hidden) {
     sPanel.style.display = '';
   }
 }
+
+function toggleInertPanel(hidden) {
+  const iPanel = inertGui.prototype._panel;
+
+  if (hidden) {
+    iPanel.style.display = 'none';
+
+    // Save current values
+    inertAbsorbSaved = inertAbsorb;
+    inertConcSaved = inertConc;
+
+    // Reset for calculation while hidden
+    inertAbsorb = 0;
+    inertConc = 0;
+    inertShown = false;
+  } else {
+    iPanel.style.display = '';
+
+    // Restore values and enable them
+    inertAbsorb = inertAbsorbSaved;
+    inertConc = inertConcSaved;
+    inertShown = true;
+
+    // Update slider positions
+    if (inertGui.sliders) {
+      inertGui.sliders[0].val = inertAbsorb;
+      inertGui.sliders[0].sliderDiv.value = inertAbsorb;
+      inertGui.sliders[0].valBox.value = formatSigFig(inertAbsorb, 3);
+
+      inertGui.sliders[1].val = inertConc;
+      inertGui.sliders[1].sliderDiv.value = inertConc;
+      inertGui.sliders[1].valBox.value = formatSigFig(inertConc, 3);
+    }
+  }
+
+  // Update attenuation curve
+  updateEquations();
+  if (AttenuationFunction) AttenuationFunction.update(equation, Depth);
+  loop();
+}
+
+
 
 
