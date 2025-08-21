@@ -265,27 +265,27 @@ function getPanelWidth(guiObject) {
 // ----------------------------
 function computeCanvasSize() {
   const PAD_SIDE = 20;
-  const aspect = 4/3;
+  const aspect = 16 / 9;
 
   let availableWidth;
   let maxHeight;
 
   if (window.innerWidth < 800) {
-    // Mobile mode → ignore side panels
+    // Mobile: full width, half height
     availableWidth = window.innerWidth - PAD_SIDE * 2;
-    maxHeight = window.innerHeight * 0.5; // half screen height
+    maxHeight = window.innerHeight * 0.5;
   } else {
-    // Desktop mode → account for panels
+    // Desktop: account for side panels
     const leftWidth = getPanelWidth(productGui) + PAD_SIDE;
     const rightWidth = getPanelWidth(gui) + PAD_SIDE;
     availableWidth = Math.max(300, window.innerWidth - leftWidth - rightWidth - PAD_SIDE);
-    maxHeight = Math.min(canvasHeightMax || 500, window.innerHeight - 40);
+    maxHeight = window.innerHeight * 0.7;
   }
 
   let w = availableWidth;
   let h = w / aspect;
 
-  // Respect maximum height
+  // Limit by height if needed
   if (h > maxHeight) {
     h = maxHeight;
     w = h * aspect;
@@ -293,6 +293,7 @@ function computeCanvasSize() {
 
   return { width: w, height: h };
 }
+
 
 
 
