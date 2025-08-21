@@ -119,7 +119,8 @@ function attenuationAt(x) {
 
 function updateEquations() {
   // use formatted numbers in the equation string so displayed equation also matches 3 sig figs
-  equation = `${formatSigFig(Intensity, 3)} * e^(-1 * ${formatSigFig(Absorb, 3)} * ${formatSigFig(Conc, 3)} / 10^7 * x)`;
+  equation = `${Intensity} * e^(-1 * ${Absorb} * ${Conc} / 10^7 * x)`
+;
 }
 
 /**
@@ -263,17 +264,23 @@ function getPanelWidth(guiObject) {
 // Dynamic Canvas Size Calculation
 // ----------------------------
 function computeCanvasSize() {
-  const PAD_SIDE = 20; // spacing between canvas and panels
+  const PAD_SIDE = 20;
+  const aspect = 16 / 9; // use widescreen ratio for modern devices
 
-  // Dynamically calculate left and right widths
-  const leftWidth = getPanelWidth(productGui) + PAD_SIDE;
-  const rightWidth = getPanelWidth(gui) + PAD_SIDE;
+  let availableWidth;
+  let maxHeight;
 
-  // Available width for the canvas
-  let availableWidth = Math.max(300, window.innerWidth - leftWidth - rightWidth - PAD_SIDE);
-
-  const maxHeight = Math.min(canvasHeightMax || 500, window.innerHeight - 40); // 40px total top/bottom padding
-  const aspect = 4 / 3; // width/height aspect ratio
+  if (window.innerWidth < 800) {
+    // Mobile mode → ignore side panels
+    availableWidth = window.innerWidth - PAD_SIDE * 2;
+    maxHeight = window.innerHeight * 0.5; // half screen height
+  } else {
+    // Desktop mode → account for panels
+    const leftWidth = getPanelWidth(productGui) + PAD_SIDE;
+    const rightWidth = getPanelWidth(gui) + PAD_SIDE;
+    availableWidth = Math.max(300, window.innerWidth - leftWidth - rightWidth - PAD_SIDE);
+    maxHeight = Math.min(canvasHeightMax || 500, window.innerHeight - 40);
+  }
 
   let w = availableWidth;
   let h = w / aspect;
@@ -288,22 +295,24 @@ function computeCanvasSize() {
 }
 
 
+
 // ----------------------------
 // Panel positioning
 // ----------------------------
 function initPanelPositions() {
+  if (window.innerWidth < 800) {
+    // On mobile, panels flow naturally via CSS
+    return;
+  }
+
   const PAD_SIDE = 20;
   const topY = PAD_SIDE;
 
-  // Right-side panels
   if (gui) setPanelPosition(gui, "right", topY, PAD_SIDE);
   if (gui2) setPanelPosition(gui2, "right", topY + secondaryGuiTopOffset, PAD_SIDE);
-
-  // Left-side panels
   if (productGui) setPanelPosition(productGui, "left", topY, PAD_SIDE);
   if (wtGui) setPanelPosition(wtGui, "left", topY + productPanelHeight + PAD_SIDE, PAD_SIDE);
 
-  // Half-life embedded text (textGui) below plot
   if (textGui && textGui.updateHalfLifeText) {
     const wrapper = document.getElementById('plot-wrapper');
     if (wrapper) {
@@ -312,6 +321,7 @@ function initPanelPositions() {
     }
   }
 }
+
 
 // ----------------------------
 // Window resize handler
