@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -49,6 +49,8 @@ MathJax = {
       <div id="abt-btn" class="btn btn-light btn-wide" data-bs-toggle="modal" data-bs-target="#about-modal">About</div>
       <div id="calc-btn" class="btn btn-light btn-wide">Reference calculations</div>
       <div id="half-btn" class="btn btn-light btn-wide">Initiator half-life</div>
+      <div id="inert-btn" class="btn btn-light btn-wide">Inert absorber</div>
+
     </div>
   </div>
 
@@ -85,6 +87,7 @@ MathJax = {
 			&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://www.researchgate.net/profile/San-Ty/post/Formulating_UV_curable_resin_with_suspended_particles/attachment/5a782b744cde266d5888cb18/AS%3A590614525665281%401517824884894/download/Photoinitiators+for+UV+curing.pdf" target="_blank" rel="noopener noreferrer">Ciba catalog</a><br>
 		2) Converting wt% to mM <br>
 		3) Calculating initiator half-life
+    4) Incorperation of an additional (inert) absorber
 		</p>
 	</div>
   </div></div>
@@ -143,6 +146,20 @@ $$
 \( \phi \) – quantum yield \((\text{mol/Einstein})\) <br>
 \( \varepsilon \) – Napierian molar extinction coefficient (base \(e\)) \((\text{L/mol·cm})\) <br>
 \( I \) – light intensity \((\text{mW/cm}^2)\) <br>
+<br>
+
+<b><u>Inert absorber contribution</u></b><br>
+The total attenuation now accounts for both the active chromophore and the inert absorber. 
+Note that this impacts intensity for half-life, but only the active species progresses.
+$$
+\frac{dI}{dz} = -I \, (\varepsilon [C] + \varepsilon_\text{inert} [C]_\text{inert})
+$$
+$$
+\frac{I}{I_0} = \exp\big(-(\varepsilon [C] + \varepsilon_\text{inert} [C]_\text{inert}) \, z\big)
+$$
+\( \varepsilon_\text{inert} \) – Napierian molar extinction coefficient of inert absorber \((\text{L/mol·cm})\) <br>
+\( [C]_\text{inert} \) – concentration of inert absorber \((\text{mol/L})\) <br>
+
 						</p>
     </div>
   </div></div>
