@@ -265,7 +265,7 @@ function getPanelWidth(guiObject) {
 // ----------------------------
 function computeCanvasSize() {
   const PAD_SIDE = 20;
-  const aspect = 16 / 9; // use widescreen ratio for modern devices
+  const aspect = 4/3;
 
   let availableWidth;
   let maxHeight;
