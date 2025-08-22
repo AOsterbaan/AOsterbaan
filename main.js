@@ -724,7 +724,7 @@ function initWtToMMGUI() {
 
   const sliders = [
     new ProductSlider('conc_wt', 0, 10, concNew, 0.001, 'Concentration absorber', 'wt%'),
-    new ProductSlider('density', 0, 2, dNew, 0.001, 'Density', 'g/mL'),
+    new ProductSlider('density', 0, 2, dNew, 0.001, 'Overall density', 'g/mL'),
     new ProductSlider('mol_weight', 0, 1000, MWNew, 0.01, 'Absorber molecular weight', 'g/mol')
   ];
   sliders.forEach(slider => slider.attachParent(parent));
