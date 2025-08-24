@@ -276,114 +276,175 @@ function draw() {
 
     attPlot.plotDraw();
 
-    // Draw λ labels
-  // --- Draw λ labels correctly on top plot ---
+    // --- Draw λ labels on top plot ---
+    const labelX1 = Depth * 0.15;
+    const labelX2 = Depth * 0.30;
+    const labelX3 = Depth * 0.45;
 
-  // Set non-overlapping x positions (fractions of Depth)
-const labelX1 = Depth * 0.15; // 15% in
-const labelX2 = Depth * 0.30; // 30% in
-const labelX3 = Depth * 0.45; // 45% in
+    const xOffset = 10;
+    const yOffset = -10;
 
-const xOffset = 10;
-const yOffset = -10;
+    const y1Val = e(-Absorb1 * Conc / 1e7 * labelX1) * Intensity1;
+    const y2Val = e(-Absorb2 * Conc / 1e7 * labelX2) * Intensity2;
+    const y3Val = e(-Absorb3 * Conc / 1e7 * labelX3) * Intensity3;
 
-// Evaluate y-values using e(x) helper
-const y1Val = e(-Absorb1 * Conc / 1e7 * labelX1) * Intensity1;
-const y2Val = e(-Absorb2 * Conc / 1e7 * labelX2) * Intensity2;
-const y3Val = e(-Absorb3 * Conc / 1e7 * labelX3) * Intensity3;
+    const cx1 = marginLeft + (labelX1 / Depth) * plotWidth + xOffset;
+    const cx2 = marginLeft + (labelX2 / Depth) * plotWidth + xOffset;
+    const cx3 = marginLeft + (labelX3 / Depth) * plotWidth + xOffset;
+    const cy1 = marginTop + plotHeight - (y1Val / maxIntensity) * plotHeight + yOffset;
+    const cy2 = marginTop + plotHeight - (y2Val / maxIntensity) * plotHeight + yOffset;
+    const cy3 = marginTop + plotHeight - (y3Val / maxIntensity) * plotHeight + yOffset;
 
-// Compute screen positions
-const cx1 = marginLeft + (labelX1 / Depth) * plotWidth + xOffset;
-const cx2 = marginLeft + (labelX2 / Depth) * plotWidth + xOffset;
-const cx3 = marginLeft + (labelX3 / Depth) * plotWidth + xOffset;
-const cy1 = marginTop + plotHeight - (y1Val / maxIntensity) * plotHeight + yOffset;
-const cy2 = marginTop + plotHeight - (y2Val / maxIntensity) * plotHeight + yOffset;
-const cy3 = marginTop + plotHeight - (y3Val / maxIntensity) * plotHeight + yOffset;
+    function drawGlowLabel(x, y, label, glowColor) {
+      drawingContext.save();
+      drawingContext.shadowBlur = 8;
+      drawingContext.shadowColor = glowColor.color;
+      fill(0);
+      noStroke();
+      text(label, x, y);
+      drawingContext.restore();
+    }
 
-// Draw glowing labels
-function drawGlowLabel(x, y, label, glowColor) {
-  drawingContext.save();
-  drawingContext.shadowBlur = 8;
-  drawingContext.shadowColor = glowColor.color;
-  fill(0);
-  noStroke();
-  text(label, x, y);
-  drawingContext.restore();
-}
-
-textSize(16);
-textAlign(LEFT, CENTER);
-drawGlowLabel(cx1, cy1, `${Wavelength1} nm`, wavelengthToRGBClamped(Wavelength1));
-drawGlowLabel(cx2, cy2, `${Wavelength2} nm`, wavelengthToRGBClamped(Wavelength2));
-drawGlowLabel(cx3, cy3, `${Wavelength3} nm`, wavelengthToRGBClamped(Wavelength3));
-
+    textSize(16);
+    textAlign(LEFT, CENTER);
+    drawGlowLabel(cx1, cy1, `${Wavelength1} nm`, wavelengthToRGBClamped(Wavelength1));
+    drawGlowLabel(cx2, cy2, `${Wavelength2} nm`, wavelengthToRGBClamped(Wavelength2));
+    drawGlowLabel(cx3, cy3, `${Wavelength3} nm`, wavelengthToRGBClamped(Wavelength3));
+  }
 
   // --- Bottom plot: weighted wavelength-averaged attenuation ---
-{
-  const left = margin +20;
-  const top = topH ;
-  const w = canvasW - 2 * margin;
-  const h = bottomH - 2 * margin;
+  {
+    const left = margin + 20;
+    const top = topH;
+    const w = canvasW - 2 * margin;
+    const h = bottomH - 2 * margin;
 
-  // Determine max value for scaling
-  const maxWeighted = 1; // Equation4 is normalized, max=1
+    const maxWeighted = 1; // normalized
 
-  // Draw axes
-  stroke(0);
-  strokeWeight(1);
-  line(left, top+h, left+w, top+h); // x-axis
-  line(left, top, left, top+h);     // y-axis
-
-  // Draw tick marks and labels
-  const numXTicks = 5;
-  const numYTicks = 5;
-  textSize(16);
-  fill(0);
-  textAlign(CENTER, TOP);
-  for (let i = 0; i <= numXTicks; i++) {
-    const xVal = i * Depth / numXTicks;
-    const xPos = left + (xVal / Depth) * w;
+    // Draw axes
     stroke(0);
-    line(xPos, top+h, xPos, top+h+5); // tick
+    strokeWeight(1);
+    line(left, top + h, left + w, top + h); // x-axis
+    line(left, top, left, top + h);         // y-axis
+
+    // Draw tick marks and labels
+    const numXTicks = 5;
+    const numYTicks = 5;
+    textSize(16);
+    fill(0);
+    textAlign(CENTER, TOP);
+    for (let i = 0; i <= numXTicks; i++) {
+      const xVal = i * Depth / numXTicks;
+      const xPos = left + (xVal / Depth) * w;
+      stroke(0);
+      line(xPos, top + h, xPos, top + h + 5);
+      noStroke();
+      text(Math.round(xVal), xPos, top + h + 8);
+    }
+    textAlign(RIGHT, CENTER);
+    for (let i = 0; i <= numYTicks; i++) {
+      const yVal = i * maxWeighted / numYTicks;
+      const yPos = top + h - (yVal / maxWeighted) * h;
+      stroke(0);
+      line(left - 5, yPos, left, yPos);
+      noStroke();
+      text(yVal.toFixed(1), left - 8, yPos);
+    }
+
+    // Draw weighted curve
+    stroke('black');
+    strokeWeight(2);
+    noFill();
+    beginShape();
+    for (let z = 0; z <= Depth; z += 1) {
+      const val = eval(equation4.replace(/x/g, z));
+      const px = left + (z / Depth) * w;
+      const py = top + h - (val / maxWeighted) * h;
+      vertex(px, py);
+    }
+    endShape();
+
+    // Axis labels
     noStroke();
-    text(Math.round(xVal), xPos, top+h+8);
-  }
-  textAlign(RIGHT, CENTER);
-  for (let i = 0; i <= numYTicks; i++) {
-    const yVal = i * maxWeighted / numYTicks;
-    const yPos = top + h - (yVal / maxWeighted) * h;
-    stroke(0);
-    line(left-5, yPos, left, yPos); // tick
-    noStroke();
-    text(yVal.toFixed(1), left-8, yPos);
+    fill(0);
+    textSize(16);
+    textAlign(CENTER, TOP);
+    text("Depth (µm)", left + w / 2, top + h + 30);
+    push();
+    translate(left - 50, top + h / 2);
+    rotate(-HALF_PI);
+    text("Photons Absorbed (normalized)", 0, 0);
+    pop();
+    textAlign(LEFT, BASELINE);
+
+    // --- Draw vertical reference lines ---
+    const targets = [
+      { fraction: 0.9, color: [255, 100, 100], label: "90%" },
+      { fraction: 0.8, color: [255, 180, 50], label: "80%" },
+      { fraction: 0.367879, color: [128, 0, 128], label: "1/e (Dₚ)" }
+    ];
+
+    targets.forEach(t => {
+      const zStep = 1;
+      let depth = Depth;
+      for (let z = 0; z <= Depth; z += zStep) {
+        if (eval(equation4.replace(/x/g, z)) <= t.fraction) {
+          depth = z;
+          break;
+        }
+      }
+      const pxLine = left + (depth / Depth) * w;
+      stroke(...t.color, 150);
+      strokeWeight(1.5);
+      line(pxLine, top, pxLine, top + h);
+      noStroke();
+      fill(...t.color);
+      textSize(14);
+      textAlign(LEFT, BOTTOM);
+      text(t.label, pxLine + 4, top + h - 2);
+    });
+
+   // --- Draw moving cursor for lower plot ---
+if (mouseX >= left && mouseX <= left + w && mouseY >= top && mouseY <= top + h) {
+  // Map mouseX to Depth
+  const cursorDepth = ((mouseX - left) / w) * Depth;
+  const cursorVal = eval(equation4.replace(/x/g, cursorDepth)); // weighted value (0..1)
+
+  // Screen positions
+  const px = left + (cursorDepth / Depth) * w;
+  const py = top + h - (cursorVal / maxWeighted) * h;
+
+  // Tooltip text
+  const depthText = `Depth: ${cursorDepth.toPrecision(3)} µm`;
+  const photonText = `Photons absorbed: ${(cursorVal*100).toFixed(0)}%`;
+
+  textSize(14);
+  textAlign(LEFT, BOTTOM);
+
+  // Dynamic offset to stay inside graph
+  const offsetX = 10;
+  const offsetY = 16; // above the point
+  let tooltipX = px + offsetX;
+  if (tooltipX + Math.max(textWidth(depthText), textWidth(photonText)) > left + w) {
+    tooltipX = px - Math.max(textWidth(depthText), textWidth(photonText)) - offsetX;
   }
 
-  // Draw y=x curve (weighted attenuation)
-  stroke('black');
-  strokeWeight(2);
-  noFill();
-  beginShape();
-  for (let z = 0; z <= Depth; z += 1) {
-    const val = eval(equation4.replace(/x/g, z));
-    const px = left + (z / Depth) * w;
-    const py = top + h - (val / maxWeighted) * h; // scale to graph height
-    vertex(px, py);
-  }
-  endShape();
+  let tooltipY = py - offsetY;
+  if (tooltipY < top) tooltipY = top + 2;
 
-  // Axis labels
+  // Draw tooltip text directly
   noStroke();
   fill(0);
-  textSize(16);
-  textAlign(CENTER, TOP);
-  text("Depth (µm)", left + w/2, top + h + 30);
-  push();
-  translate(left-50, top+h/2);
-  rotate(-HALF_PI);
-  text("Photons Absorbed (normalized)", 0, 0);
-  pop();
-  textAlign(LEFT, BASELINE);
+  text(depthText, tooltipX, tooltipY);
+  text(photonText, tooltipX, tooltipY - 16); // stacked above
+  
+
+  // Draw cursor circle
+  stroke(100, 180, 255);
+  fill(100, 180, 255, 180);
+  ellipse(px, py, 12, 12);
 }
+
 
   }
 }
@@ -476,3 +537,12 @@ function wavelengthToRGBClamped(wavelength) {
   return { color: `#${toHex(R)}${toHex(G)}${toHex(B)}`, visible };
 }
 
+function computeWeightedDepth(targetFraction) {
+  // Simple numeric search to find z where equation4 = targetFraction
+  let zStep = 1; // step in µm
+  for (let z = 0; z <= Depth; z += zStep) {
+    const val = eval(equation4.replace(/x/g, z)); // y value at depth z
+    if (val <= targetFraction) return z;
+  }
+  return Depth; // fallback
+}
