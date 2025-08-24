@@ -384,25 +384,41 @@ function draw() {
       { fraction: 0.367879, color: [128, 0, 128], label: "1/e (Dₚ)" }
     ];
 
-    targets.forEach(t => {
-      const zStep = 1;
-      let depth = Depth;
-      for (let z = 0; z <= Depth; z += zStep) {
-        if (eval(equation4.replace(/x/g, z)) <= t.fraction) {
-          depth = z;
-          break;
-        }
-      }
-      const pxLine = left + (depth / Depth) * w;
-      stroke(...t.color, 150);
-      strokeWeight(1.5);
-      line(pxLine, top, pxLine, top + h);
-      noStroke();
-      fill(...t.color);
-      textSize(14);
-      textAlign(LEFT, BOTTOM);
-      text(t.label, pxLine + 4, top + h - 2);
-    });
+const usedLabels = []; // keep track of previous label positions
+
+targets.forEach(t => {
+  const zStep = 1;
+  let depth = Depth;
+  for (let z = 0; z <= Depth; z += zStep) {
+    if (eval(equation4.replace(/x/g, z)) <= t.fraction) {
+      depth = z;
+      break;
+    }
+  }
+  const pxLine = left + (depth / Depth) * w;
+  stroke(...t.color, 150);
+  strokeWeight(1.5);
+  line(pxLine, top, pxLine, top + h);
+
+  // --- Stagger labels if overlapping ---
+  let labelY = top + h - 2;
+  const minSpacingX = 40;  // horizontal threshold
+  const minSpacingY = 20;  // vertical shift if overlapping
+  usedLabels.forEach(ul => {
+    if (Math.abs(pxLine - ul.x) < minSpacingX) {
+      labelY = ul.y - minSpacingY; // stagger upwards
+    }
+  });
+  usedLabels.push({ x: pxLine, y: labelY });
+
+  // Draw label
+  const labelX = pxLine + 4;
+  textSize(16);
+  textAlign(LEFT, BOTTOM);
+  noStroke();
+  fill(...t.color);
+  text(t.label, labelX, labelY);
+});
 
    // --- Draw moving cursor for lower plot ---
 if (mouseX >= left && mouseX <= left + w && mouseY >= top && mouseY <= top + h) {
