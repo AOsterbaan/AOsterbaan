@@ -172,6 +172,11 @@ function initPlot() {
   attPlot.GPLOT.getXAxis().getAxisLabel().setText("Depth (\u03BCm)");
   attPlot.GPLOT.getYAxis().getAxisLabel().setText("Intensity (mW/cm²)");
   attPlot.GPLOT.getTitle().setText("Attenuation with multiple wavelengths");
+  attPlot.GPLOT.getXAxis().getAxisLabel().setFontSize(16);
+  attPlot.GPLOT.getYAxis().getAxisLabel().setFontSize(16);
+  attPlot.GPLOT.getXAxis().setFontSize(16);
+  attPlot.GPLOT.getYAxis().setFontSize(16);
+  attPlot.GPLOT.getTitle().setFontSize(16);
   attPlot.GPLOT.setFontSize(16);
 }
 
@@ -306,7 +311,7 @@ function drawGlowLabel(x, y, label, glowColor) {
   drawingContext.restore();
 }
 
-textSize(14);
+textSize(16);
 textAlign(LEFT, CENTER);
 drawGlowLabel(cx1, cy1, `${Wavelength1} nm`, wavelengthToRGBClamped(Wavelength1));
 drawGlowLabel(cx2, cy2, `${Wavelength2} nm`, wavelengthToRGBClamped(Wavelength2));
@@ -316,7 +321,7 @@ drawGlowLabel(cx3, cy3, `${Wavelength3} nm`, wavelengthToRGBClamped(Wavelength3)
   // --- Bottom plot: weighted wavelength-averaged attenuation ---
 {
   const left = margin +20;
-  const top = topH + margin;
+  const top = topH ;
   const w = canvasW - 2 * margin;
   const h = bottomH - 2 * margin;
 
@@ -332,7 +337,7 @@ drawGlowLabel(cx3, cy3, `${Wavelength3} nm`, wavelengthToRGBClamped(Wavelength3)
   // Draw tick marks and labels
   const numXTicks = 5;
   const numYTicks = 5;
-  textSize(12);
+  textSize(16);
   fill(0);
   textAlign(CENTER, TOP);
   for (let i = 0; i <= numXTicks; i++) {
@@ -350,7 +355,7 @@ drawGlowLabel(cx3, cy3, `${Wavelength3} nm`, wavelengthToRGBClamped(Wavelength3)
     stroke(0);
     line(left-5, yPos, left, yPos); // tick
     noStroke();
-    text(yVal.toFixed(2), left-8, yPos);
+    text(yVal.toFixed(1), left-8, yPos);
   }
 
   // Draw y=x curve (weighted attenuation)
@@ -369,11 +374,11 @@ drawGlowLabel(cx3, cy3, `${Wavelength3} nm`, wavelengthToRGBClamped(Wavelength3)
   // Axis labels
   noStroke();
   fill(0);
-  textSize(14);
+  textSize(16);
   textAlign(CENTER, TOP);
   text("Depth (µm)", left + w/2, top + h + 30);
   push();
-  translate(left-60, top+h/2);
+  translate(left-50, top+h/2);
   rotate(-HALF_PI);
   text("Photons Absorbed (normalized)", 0, 0);
   pop();
