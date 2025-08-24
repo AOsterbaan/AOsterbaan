@@ -395,30 +395,35 @@ targets.forEach(t => {
       break;
     }
   }
-  const pxLine = left + (depth / Depth) * w;
-  stroke(...t.color, 150);
-  strokeWeight(1.5);
-  line(pxLine, top, pxLine, top + h);
 
-  // --- Stagger labels if overlapping ---
-  let labelY = top + h - 2;
-  const minSpacingX = 40;  // horizontal threshold
-  const minSpacingY = 20;  // vertical shift if overlapping
-  usedLabels.forEach(ul => {
-    if (Math.abs(pxLine - ul.x) < minSpacingX) {
-      labelY = ul.y - minSpacingY; // stagger upwards
-    }
-  });
-  usedLabels.push({ x: pxLine, y: labelY });
+  // ✅ Only draw if the found depth is inside the x-range
+  if (depth < Depth) {
+    const pxLine = left + (depth / Depth) * w;
+    stroke(...t.color, 150);
+    strokeWeight(1.5);
+    line(pxLine, top, pxLine, top + h);
 
-  // Draw label
-  const labelX = pxLine + 4;
-  textSize(16);
-  textAlign(LEFT, BOTTOM);
-  noStroke();
-  fill(...t.color);
-  text(t.label, labelX, labelY);
+    // --- Stagger labels if overlapping ---
+    let labelY = top + h - 2;
+    const minSpacingX = 40;  // horizontal threshold
+    const minSpacingY = 20;  // vertical shift if overlapping
+    usedLabels.forEach(ul => {
+      if (Math.abs(pxLine - ul.x) < minSpacingX) {
+        labelY = ul.y - minSpacingY; // stagger upwards
+      }
+    });
+    usedLabels.push({ x: pxLine, y: labelY });
+
+    // Draw label
+    const labelX = pxLine + 4;
+    textSize(16);
+    textAlign(LEFT, BOTTOM);
+    noStroke();
+    fill(...t.color);
+    text(t.label, labelX, labelY);
+  }
 });
+
 
    // --- Draw moving cursor for lower plot ---
 if (mouseX >= left && mouseX <= left + w && mouseY >= top && mouseY <= top + h) {
