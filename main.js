@@ -295,7 +295,7 @@ function computeCanvasSize() {
     const leftWidth = getPanelWidth(productGui) + PAD_SIDE;
     const rightWidth = getPanelWidth(gui) + PAD_SIDE;
     availableWidth = Math.max(300, window.innerWidth - leftWidth - rightWidth - PAD_SIDE);
-    maxHeight = window.innerHeight * 0.7;
+    maxHeight = window.innerHeight * 0.9;
   }
 
   let w = availableWidth;
